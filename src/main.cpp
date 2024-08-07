@@ -124,7 +124,7 @@ void bottom2updateEncoder() {
 
 void setup() {
   Serial.begin(9600);
-  char *localName = "DiffySwervePesto";
+  char *localName = "MiniFRCDiffySwerve";
   PestoLink.begin(localName);
   // drivetrain.begin();
 
@@ -138,9 +138,21 @@ void setup() {
   // attachInterrupt(digitalPinToInterrupt(bottom2.enc1), bottom2updateEncoder, CHANGE);
   // attachInterrupt(digitalPinToInterrupt(bottom2.enc2), bottom2updateEncoder, CHANGE);
 
-  top1.begin();
+  right.begin();
 }
 
 void loop() {
-  right.setDesiredState(moduleState(0, 90.0));
+  if (PestoLink.update()) {
+    double leftStickY = PestoLink.getAxis(1);
+    double leftStickX = PestoLink.getAxis(0);
+    
+    double leftStickMagnitude = sqrt(pow(leftStickX, 2) + pow(leftStickY, 2));
+    double leftStickAngle = atan2(leftStickY, leftStickX);
+
+    double speed = leftStickMagnitude * 100;
+    double angle = leftStickAngle * 180 / PI;
+
+    moduleState state = moduleState(speed, angle);
+    right.setDesiredState(state);
+  }
 }

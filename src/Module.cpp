@@ -12,7 +12,7 @@ void Module::setDesiredState(moduleState state) {
     double speedSpeed = getMotorSpeedsForSpeed(state.speed);
 
     double top1 = angleSpeed + speedSpeed;
-    double bottom1 = -(angleSpeed - speedSpeed);
+    double bottom1 = -(angleSpeed + speedSpeed);
 
     top->setVelocity(top1);
     bottom->setVelocity(bottom1);
@@ -55,9 +55,11 @@ double Module::getModuleOrientation() {
 }
 
 double Module::getMotorSpeedsForAngle(double angleDegrees) {
-    double kp = 1;
+    double kp = 0.3;
+    double kd = 0.1;
     double error = angleDegrees - getModuleOrientation();
-    double u = kp * error;
+    double u = kp * error + kd * (error - prevErrorAngle);
+    prevErrorAngle = error;
 
     // convert u from degreesPerSecond to ticksPerSecond
     double ticksPerRevolution = 1100;//1440;
@@ -67,13 +69,13 @@ double Module::getMotorSpeedsForAngle(double angleDegrees) {
 
     double ticksPerSecond = (u / 360) * ticksPerModuleRev;
 
-    double rpm = top->TicksPerSecondtoRPM(ticksPerSecond);
+    Serial.println(error);
 
-    if (fabs(error) < 1) {
+    if (fabs(error) < 3) {
         return 0;
     }
 
-    return rpm;
+    return ticksPerSecond;
 }
 
 double Module::getMotorSpeedsForSpeed(double speed) {

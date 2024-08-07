@@ -39,6 +39,8 @@ class Module {
     private:
         Motor* top;
         Motor* bottom;
+
+        double prevErrorAngle = 0;
 };
 
 #endif // MODULE_H
