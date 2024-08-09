@@ -2,6 +2,7 @@
 #define MODULE_H
 
 #include <Motor.h>
+#include <MotionGenerator.h>
 
 struct moduleState {
     double speed;
@@ -32,8 +33,10 @@ class Module {
         double rotateAngleBy(double angle, double angleToRotateBy);
         double wrap0To360(double angle);
         double wrapNeg180To180(double angle);
-        void resetState();
         double getError(double degrees);
+        double getProfileState();
+
+        void loop();
 
         moduleID id;
     private:
@@ -41,6 +44,13 @@ class Module {
         Motor* bottom;
 
         double prevErrorAngle = 0;
+
+        double wheelRadius = 0.05;
+        double gearRatio = 0.4;
+
+        MotionGenerator trapezoidalProfile = MotionGenerator(30, 100, 0);
+
+        float profilePos = 0;
 };
 
 #endif // MODULE_H

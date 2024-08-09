@@ -7,86 +7,74 @@ Module::Module(Motor* top, Motor* bottom, moduleID id) :
 {}
 
 void Module::setDesiredState(moduleState state) {
-    // moduleState newState = optimize(state);
     double angleSpeed = getMotorSpeedsForAngle(state.angle);
     double speedSpeed = getMotorSpeedsForSpeed(state.speed);
 
+    // Serial.println(angleSpeed);
+
     double top1 = angleSpeed + speedSpeed;
-    double bottom1 = -(angleSpeed + speedSpeed);
+    double bottom1 = angleSpeed - speedSpeed;
 
     top->setVelocity(top1);
     bottom->setVelocity(bottom1);
 }
 
 void Module::stop() {
-    top->setPower(0);
-    bottom->setPower(0);
+    top->setVelocity(0);
+    bottom->setVelocity(0);
 }
 
 void Module::begin() {
     top->begin();
     bottom->begin();
+    bottom->setInverted(true);
+
+    trapezoidalProfile.init();
+    trapezoidalProfile.setInitPosition(0);
+}
+
+void Module::loop() {
+    top->loop();
+    bottom->loop();
 }
 
 double Module::getModuleOrientation() {
-    double topPosition = top->getPosition();
-    double bottomPosition = bottom->getPosition();
+    double topAngleRads = top->getPosition();
+    double bottomAngleRads = bottom->getPosition();
 
-    double angle = (topPosition - bottomPosition) / 16;
+    double angleInRads = (topAngleRads - bottomAngleRads) / 2;
 
-    //convert angle to degrees
-    double ticksPerRevolution = 1100;//1440;
-    double gearRatio = 0.4;
+    double angleInDegrees = angleInRads * 180 / PI;
 
-    double ticksPerModuleRev = ticksPerRevolution * gearRatio;
-
-    double angleInDegrees = (angle / ticksPerModuleRev) * 360;
+    double finalAngle = angleInDegrees * gearRatio;
 
     // wrap the angle 0 to 360
-    angleInDegrees = wrap0To360(angleInDegrees);
-
-    // if (angleInDegrees > 180) {
-    //     angleInDegrees -= 360;
-    // } else if (angleInDegrees < -180) {
-    //     angleInDegrees += 360;
-    // }
+    finalAngle = wrap0To360(finalAngle);
 
     return angleInDegrees;
 }
 
+double Module::getProfileState() {
+    return profilePos;
+}
+
 double Module::getMotorSpeedsForAngle(double angleDegrees) {
-    double kp = 0.3;
-    double kd = 0.1;
-    double error = angleDegrees - getModuleOrientation();
-    double u = kp * error + kd * (error - prevErrorAngle);
-    prevErrorAngle = error;
+    profilePos = trapezoidalProfile.update(angleDegrees);
+    double velocityRadPerSec = trapezoidalProfile.getVelocity();
 
-    // convert u from degreesPerSecond to ticksPerSecond
-    double ticksPerRevolution = 1100;//1440;
-    double gearRatio = 0.4;
-
-    double ticksPerModuleRev = ticksPerRevolution * gearRatio;
-
-    double ticksPerSecond = (u / 360) * ticksPerModuleRev;
-
-    Serial.println(error);
-
-    if (fabs(error) < 3) {
+    if (trapezoidalProfile.getFinished()) {
         return 0;
     }
 
-    return ticksPerSecond;
+    return velocityRadPerSec;
 }
 
-double Module::getMotorSpeedsForSpeed(double speed) {
-    double ticksPerRevolution = 1100;//1440;
-    double gearRatio = 0.4;
+double Module::getMotorSpeedsForSpeed(double speedMetersPerSecond) {
+    double wheelCircumference = 2 * PI * wheelRadius;
+    double speedRadsPerSec = speedMetersPerSecond / wheelCircumference;
+    double finalSpeed = speedRadsPerSec / gearRatio;
 
-    double ticksPerModuleRev = ticksPerRevolution * gearRatio;
-
-    double ticksPerSecond = (speed / 360) * ticksPerModuleRev;
-
-    return ticksPerSecond;
+    return finalSpeed;
 }
 
 moduleState Module::optimize(moduleState desiredState) {
@@ -107,8 +95,8 @@ moduleState Module::getState() {
     double angle = getModuleOrientation();
     double gearRatio = 0.4;
 
-    double topSpeed = top->getVelocityRPM();
-    double bottomSpeed = bottom->getVelocityRPM();
+    double topSpeed = top->getVelocityRads();
+    double bottomSpeed = bottom->getVelocityRads();
 
     double speed = (topSpeed + bottomSpeed) / 2;
 
@@ -141,11 +129,6 @@ double Module::wrapNeg180To180(double angle) {
         angle += 360;
     }
     return angle;
-}
-
-void Module::resetState() {
-    top->resetPosition();
-    bottom->resetPosition();
 }
 
 double Module::getError(double degrees) {

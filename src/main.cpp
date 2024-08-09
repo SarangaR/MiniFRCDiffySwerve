@@ -3,156 +3,90 @@
 #include <PestoLink-Receive.h>
 #include <Drivetrain.h>
 
-NoU_Motor rawTop1(1);
-NoU_Motor rawBottom1(4);
-NoU_Motor rawTop2(2);
-NoU_Motor rawBottom2(3);
+DCMotor rawtop1 = DCMotor();
+DCMotor rawbottom1 = DCMotor();
+DCMotor rawtop2 = DCMotor();
+DCMotor rawbottom2 = DCMotor();
 
-std::vector<double> top1Constants = {1, 0, 0};
-std::vector<double> bottom1Constants = {1, 0, 0};
-std::vector<double> top2Constants = {1, 0, 0};
-std::vector<double> bottom2Constants = {1, 0, 0};
+DCDriver2PWM top1Driver = DCDriver2PWM(MOTOR1_A, MOTOR1_B);
+DCDriver2PWM bottom1Driver = DCDriver2PWM(MOTOR4_A, MOTOR4_B);
+DCDriver2PWM top2Driver = DCDriver2PWM(MOTOR2_A, MOTOR2_B);
+DCDriver2PWM bottom2Driver = DCDriver2PWM(MOTOR3_A, MOTOR3_B);
 
-Motor top1 = Motor(1, 4, 5, top1Constants, &rawTop1);
-Motor bottom1 = Motor(4, 2, 35, bottom1Constants, &rawBottom1);
-Motor top2 = Motor(2, TX, RX, top2Constants, &rawTop2);
-Motor bottom2 = Motor(3, 36, 39, bottom2Constants, &rawBottom2);
+Encoder top1Encoder = Encoder(4, 5, 1050);
+Encoder bottom1Encoder = Encoder(2, 35, 1050);
+Encoder top2Encoder = Encoder(TX, RX, 1050);
+Encoder bottom2Encoder = Encoder(36, 39, 1050);
+
+std::vector<double> top1Constants = {10.0, 5.0, 0};
+std::vector<double> bottom1Constants = {10.0, 5.0, 0};
+std::vector<double> top2Constants = {10.0, 5.0, 0};
+std::vector<double> bottom2Constants = {10.0, 5.0, 0};
+
+Motor top1 = Motor(4, 5, top1Constants, &rawtop1, &top1Driver, &top1Encoder);
+Motor bottom1 = Motor(2, 35, bottom1Constants, &rawbottom1, &bottom1Driver, &bottom1Encoder);
+Motor top2 = Motor(TX, RX, top2Constants, &rawtop2, &top2Driver, &top2Encoder);
+Motor bottom2 = Motor(36, 39, bottom2Constants, &rawbottom2, &bottom2Driver, &bottom2Encoder);
 
 Module right(&top1, &bottom1, RIGHT);
 Module left(&top2, &bottom2, LEFT);
 
-// Motor top1(1, 4, 5, top1Constants, rawTop1);
-// Motor bottom1(4, 2, 35, bottom1Constants, rawBottom1);
-// Motor top2(2, TX, RX, top2Constants, rawTop2);
-// Motor bottom2(3, 34, 39, bottom2Constants, rawBottom2);
-
-// Module left(top1, bottom1);
-// Module right(top2, bottom2);
-
-// Drivetrain drivetrain(left, right);
-
 double start = 0;
 
-void top1updateEncoder() {
-  int MSB = digitalRead(top1.enc1);
-  int LSB = digitalRead(top1.enc2);
-
-  int increment = 0;
-
-  int encoded = (MSB << 1) | LSB;
-  int sum = (top1.lastEncoded << 2) | encoded;
-
-  if(sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) {
-    top1.encoderValue--;
-    top1.increment = -1;
-  };
-  if(sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) {
-    top1.encoderValue++;
-    top1.increment = 1;
-  };
-
-  top1.lastEncoded = encoded;
-
-  // long currT = micros();
-  // float deltaT = ((float) (currT - top1.lastTime)) / 1.0e6;
-  // top1.encoderVelocity = increment/deltaT;
-  // top1.lastTime = currT;
+void top1A() {
+  top1Encoder.handleA();
 }
 
-void bottom1updateEncoder() {
-  int MSB = digitalRead(bottom1.enc1);
-  int LSB = digitalRead(bottom1.enc2);
-
-  int increment = 0;
-
-  int encoded = (MSB << 1) | LSB;
-  int sum = (bottom1.lastEncoded << 2) | encoded;
-
-  if(sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) {
-    bottom1.encoderValue--;
-    increment = -1;
-  };
-  if(sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) {
-    bottom1.encoderValue++;
-    increment = 1;
-  };
-
-  bottom1.lastEncoded = encoded;
+void top1B() {
+  top1Encoder.handleB();
 }
 
-void top2updateEncoder() {
-  int MSB = digitalRead(top2.enc1);
-  int LSB = digitalRead(top2.enc2);
-
-  int increment = 0;
-
-  int encoded = (MSB << 1) | LSB;
-  int sum = (top2.lastEncoded << 2) | encoded;
-
-  if(sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) {
-    top2.encoderValue--;
-    increment = -1;
-  };
-  if(sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) {
-    top2.encoderValue++;
-    increment = 1;
-  };
-
-  top2.lastEncoded = encoded;
+void bottom1A() {
+  bottom1Encoder.handleA();
 }
 
-void bottom2updateEncoder() {
-  int MSB = digitalRead(bottom2.enc1);
-  int LSB = digitalRead(bottom2.enc2);
+void bottom1B() {
+  bottom1Encoder.handleB();
+}
 
-  int increment = 0;
+void top2A() {
+  top2Encoder.handleA();
+}
 
-  int encoded = (MSB << 1) | LSB;
-  int sum = (bottom2.lastEncoded << 2) | encoded;
+void top2B() {
+  top2Encoder.handleB();
+}
 
-  if(sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) {
-    bottom2.encoderValue--;
-    increment = -1;
-  };
-  if(sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) {
-    bottom2.encoderValue++;
-    increment = 1;
-  };
+void bottom2A() {
+  bottom2Encoder.handleA();
+}
 
-  bottom2.lastEncoded = encoded;
+void bottom2B() {
+  bottom2Encoder.handleB();
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial1.begin(115200);
   char *localName = "MiniFRCDiffySwerve";
   PestoLink.begin(localName);
-  // drivetrain.begin();
 
-  attachInterrupt(digitalPinToInterrupt(top1.enc1), top1updateEncoder, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(top1.enc2), top1updateEncoder, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(bottom1.enc1), bottom1updateEncoder, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(bottom1.enc2), bottom1updateEncoder, CHANGE);
+  SimpleFOCDebug::enable();
 
-  // attachInterrupt(digitalPinToInterrupt(top2.enc1), top2updateEncoder, CHANGE);
-  // attachInterrupt(digitalPinToInterrupt(top2.enc2), top2updateEncoder, CHANGE);
-  // attachInterrupt(digitalPinToInterrupt(bottom2.enc1), bottom2updateEncoder, CHANGE);
-  // attachInterrupt(digitalPinToInterrupt(bottom2.enc2), bottom2updateEncoder, CHANGE);
+  top1Encoder.enableInterrupts(top1A, top1B);
+  bottom1Encoder.enableInterrupts(bottom1A, bottom1B);
+  top2Encoder.enableInterrupts(top2A, top2B);
+  bottom2Encoder.enableInterrupts(bottom2A, bottom2B);
+
+  top1Encoder.init();
+  bottom1Encoder.init();
+  top2Encoder.init();
+  bottom2Encoder.init();
 
   right.begin();
 }
 
 void loop() {
-  if (PestoLink.update()) {
-    double leftStickY = PestoLink.getAxis(1);
-    double leftStickX = PestoLink.getAxis(0);
-    
-    double leftStickMagnitude = sqrt(pow(leftStickX, 2) + pow(leftStickY, 2));
-    double leftStickAngle = atan2(leftStickY, leftStickX);
-
-    double speed = leftStickMagnitude * 100;
-    double angle = leftStickAngle * 180 / PI;
-
-    moduleState state = moduleState(speed, angle);
-    right.setDesiredState(state);
-  }
+  right.loop();
+  right.setDesiredState(moduleState(0, 90));
+  Serial1.println(right.getModuleOrientation());
 }
