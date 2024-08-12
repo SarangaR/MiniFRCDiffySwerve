@@ -8,9 +8,7 @@ Module::Module(Motor* top, Motor* bottom, moduleID id) :
 
 void Module::setDesiredState(moduleState state) {
     double angleSpeed = getMotorSpeedsForAngle(state.angle);
-    double speedSpeed = getMotorSpeedsForSpeed(state.speed);
-
-    // Serial.println(angleSpeed);
+    double speedSpeed = -getMotorSpeedsForSpeed(state.speed);
 
     double top1 = angleSpeed + speedSpeed;
     double bottom1 = angleSpeed - speedSpeed;
@@ -46,12 +44,18 @@ double Module::getModuleOrientation() {
 
     double angleInDegrees = angleInRads * 180 / PI;
 
-    double finalAngle = angleInDegrees * gearRatio;
+    double finalAngle = angleInDegrees * getErrorModifier(90, 74.53);
 
-    // wrap the angle 0 to 360
-    finalAngle = wrap0To360(finalAngle);
+    return wrapNeg180To180(finalAngle);
+}
 
-    return angleInDegrees;
+double Module::getModuleSpeed() {
+    double topSpeed = top->getVelocityRads();
+    double bottomSpeed = bottom->getVelocityRads();
+
+    double speed = (topSpeed + bottomSpeed) / 2;
+
+    return speed;
 }
 
 double Module::getProfileState() {
@@ -59,14 +63,16 @@ double Module::getProfileState() {
 }
 
 double Module::getMotorSpeedsForAngle(double angleDegrees) {
-    profilePos = trapezoidalProfile.update(angleDegrees);
-    double velocityRadPerSec = trapezoidalProfile.getVelocity();
+    angleTarget = angleDegrees;
+    double error = angleDegrees - getModuleOrientation();
+    double pidOutput = pid(error);
 
-    if (trapezoidalProfile.getFinished()) {
+    if (fabs(pidOutput) > 0.2*26) {
+        return pidOutput;
+    }
+    else {
         return 0;
     }
-
-    return velocityRadPerSec;
 }
 
 double Module::getMotorSpeedsForSpeed(double speedMetersPerSecond) {
@@ -74,41 +80,21 @@ double Module::getMotorSpeedsForSpeed(double speedMetersPerSecond) {
     double speedRadsPerSec = speedMetersPerSecond / wheelCircumference;
     double finalSpeed = speedRadsPerSec / gearRatio;
 
-    return finalSpeed;
-}
+    speedTarget = finalSpeed;
 
-moduleState Module::optimize(moduleState desiredState) {
-    moduleState newState = moduleState(0, 0); 
-    float delta = getState().angle - desiredState.angle;
-    if (fabs(delta) > 90.0) {
-        newState.speed = -desiredState.speed;
-        newState.angle = rotateAngleBy(getState().angle, 180);
-    }
-    else {
-        newState.speed = desiredState.speed;
-        newState.angle = desiredState.angle;
-    }
-    return newState;
+    return finalSpeed;
 }
 
 moduleState Module::getState() {
     double angle = getModuleOrientation();
-    double gearRatio = 0.4;
-
-    double topSpeed = top->getVelocityRads();
-    double bottomSpeed = bottom->getVelocityRads();
-
-    double speed = (topSpeed + bottomSpeed) / 2;
-
-    speed *= gearRatio;
+    double speed = getModuleSpeed();
 
     return moduleState(speed, angle);
 }
 
 double Module::rotateAngleBy(double angle, double angleToRotateBy) {
     double newAngle = angle + angleToRotateBy;
-    newAngle = wrap0To360(newAngle);
-    return newAngle;
+    return wrapNeg180To180(newAngle);
 }
 
 double Module::wrap0To360(double angle) {
@@ -134,3 +120,9 @@ double Module::wrapNeg180To180(double angle) {
 double Module::getError(double degrees) {
     return degrees - getModuleOrientation();
 }
+
+double Module::getErrorModifier(double expected, double actual) {
+    double modifier = expected / actual;
+    return modifier;
+}
+

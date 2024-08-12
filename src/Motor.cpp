@@ -40,10 +40,11 @@ void Motor::begin() {
 
     rawMotor->enable();
 
-    Serial.println("Motor Initialized");
+    // Serial.println("Motor Initialized");
 }
 
 void Motor::loop() {
+    sensor->update();
     rawMotor->loopFOC();
 }
 
@@ -57,6 +58,12 @@ void Motor::setVelocity(double velocity) {
     if (inverted) {
         dir = -1;
     }
+
+    double min_vel = 0.2*26;
+
+    if (fabs(velocity) < min_vel) {
+        velocity = 0;
+    }
     rawMotor->move(velocity*dir);
 }
 
@@ -69,11 +76,13 @@ void Motor::stop() {
 }
 
 double Motor::getPosition() {
-    return rawMotor->shaftAngle();
+    // return sensor->getPreciseAngle();
+    return rawMotor->shaftAngle();;
 }
 
 double Motor::getVelocityRads() {
-    return rawMotor->shaft_velocity;
+    // return sensor->getVelocity();
+    return rawMotor->shaftVelocity();
 }
 
 void Motor::moveToPosition(double position) {

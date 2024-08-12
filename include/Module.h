@@ -12,6 +12,10 @@ struct moduleState {
         speed(speed),
         angle(angle)
     {}
+
+    String toString() {
+        return "Speed: " + String(speed) + " Angle: " + String(angle);
+    }
 };
 
 enum moduleID {
@@ -25,16 +29,17 @@ class Module {
         void stop();
         void begin();
         double getModuleOrientation();
+        double getModuleSpeed();
         std::vector<double> rotateModule(double angle);
         double getMotorSpeedsForAngle(double angleDegrees);
         double getMotorSpeedsForSpeed(double speed);
-        moduleState optimize(moduleState state);
         moduleState getState();
         double rotateAngleBy(double angle, double angleToRotateBy);
         double wrap0To360(double angle);
         double wrapNeg180To180(double angle);
         double getError(double degrees);
         double getProfileState();
+        double getErrorModifier(double expected, double actual);
 
         void loop();
 
@@ -51,6 +56,12 @@ class Module {
         MotionGenerator trapezoidalProfile = MotionGenerator(30, 100, 0);
 
         float profilePos = 0;
+        double angleTarget = 0;
+        double speedTarget = 0;
+
+        bool alreadyDone = false;
+
+        PIDController pid = PIDController(0.5, 0.0, 0.0, 0.0, 26.18);
 };
 
 #endif // MODULE_H

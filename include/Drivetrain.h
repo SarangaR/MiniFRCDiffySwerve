@@ -7,15 +7,22 @@
 
 class Drivetrain {
     public:
-        Drivetrain(Module left, Module right);
+        Drivetrain(Module* left, Module* right);
         void drive(double vx, double vy, double omega);
-        std::vector<moduleState> toSwerveModuleStates();
+        std::vector<moduleState> toSwerveModuleStates(double vx, double vy, double omega);
         void stop();
         void begin();
+        double getGyroAngle();
+        void loop();
+        moduleState optimize(moduleState desiredState, moduleState currentState);
+        std::vector<double> normalizeSpeeds(std::vector<double> speeds);
 
     private:
-        Module left;
-        Module right;
+        Module* left;
+        Module* right;
+
+        double LENGTH = 0.5;
+        double WIDTH = 0.5;
 
 };
 

@@ -31,6 +31,8 @@ Motor bottom2 = Motor(36, 39, bottom2Constants, &rawbottom2, &bottom2Driver, &bo
 Module right(&top1, &bottom1, RIGHT);
 Module left(&top2, &bottom2, LEFT);
 
+Drivetrain drivetrain(&left, &right);
+
 double start = 0;
 
 void top1A() {
@@ -65,8 +67,16 @@ void bottom2B() {
   bottom2Encoder.handleB();
 }
 
+double applyDeadband(double value, double deadband) {
+  if (abs(value) < deadband) {
+    return 0;
+  }
+  return value;
+}
+
 void setup() {
-  Serial1.begin(115200);
+  Serial.begin(115200);
+  while(!Serial);
   char *localName = "MiniFRCDiffySwerve";
   PestoLink.begin(localName);
 
@@ -74,19 +84,34 @@ void setup() {
 
   top1Encoder.enableInterrupts(top1A, top1B);
   bottom1Encoder.enableInterrupts(bottom1A, bottom1B);
-  top2Encoder.enableInterrupts(top2A, top2B);
-  bottom2Encoder.enableInterrupts(bottom2A, bottom2B);
+  // top2Encoder.enableInterrupts(top2A, top2B);
+  // bottom2Encoder.enableInterrupts(bottom2A, bottom2B);
 
   top1Encoder.init();
   bottom1Encoder.init();
-  top2Encoder.init();
-  bottom2Encoder.init();
+  // top2Encoder.init();
+  // bottom2Encoder.init();
 
-  right.begin();
+  drivetrain.begin();
 }
 
 void loop() {
-  right.loop();
-  right.setDesiredState(moduleState(0, 90));
-  Serial1.println(right.getModuleOrientation());
+  drivetrain.loop();
+
+  double vxf = 0;
+  double vyf = 0;
+  double omega = 0;
+
+  if (PestoLink.update()) {
+    vxf = -applyDeadband(PestoLink.getAxis(0), 0.1);
+    vyf = applyDeadband(PestoLink.getAxis(1), 0.1);
+    omega = applyDeadband(PestoLink.getAxis(2), 0.1);
+
+    if (vxf != 0 || vyf != 0 || omega != 0) {
+      drivetrain.drive(vxf, vyf, omega);
+    }
+    else {
+      drivetrain.stop();
+    }
+  }
 }
