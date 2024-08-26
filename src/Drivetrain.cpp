@@ -6,49 +6,63 @@ Drivetrain::Drivetrain(Module* left, Module* right) :
 {}
 
 void Drivetrain::begin() {
-    // left->begin();
+    left->begin();
     right->begin();
 }
 
 double Drivetrain::getGyroAngle() {
     //TODO: Implement this
-    return 0;
+    double gyroAngle = 0;
+
+    return right->wrapNeg180To180(gyroAngle);
 }
 
 void Drivetrain::loop() {
-    // left->loop();
+    left->loop();
     right->loop();
 }
 
 std::vector<moduleState> Drivetrain::toSwerveModuleStates(double vxf, double vyf, double omega) {
     double gyroAngle = getGyroAngle();
-    double vx = vxf * cos(gyroAngle) + vyf * sin(gyroAngle);
-    double vy = -vxf * sin(gyroAngle) + vyf * cos(gyroAngle);
+    double temp = vyf * cos(gyroAngle) + vxf * sin(gyroAngle);
+    double vx = -vyf * sin(gyroAngle) + vxf * cos(gyroAngle);
+    double vy = temp;
 
-    double A = vx - omega * (LENGTH/2.0);
-    double B = vx  + omega * (LENGTH/2.0);
-    double C = vy - omega * (WIDTH/2.0);
-    double D = vy + omega * (WIDTH/2.0);
+    double R = sqrt(pow(LENGTH, 2) + pow(WIDTH, 2));
 
-    double topRightSpeed = sqrt(pow(B, 2) + pow(C, 2));
-    double topRightAngle = atan2(B, C) * 180 / PI;
+    double A = vx - omega * (LENGTH/R);
+    double B = vx  + omega * (LENGTH/R);
+    double C = vy - omega * (WIDTH/R);
+    double D = vy + omega * (WIDTH/R);
 
-    double bottomLeftSpeed = sqrt(pow(A, 2) + pow(D, 2));
-    double bottomLeftAngle = atan2(A, D) * 180 / PI;
+    double frSpeed = sqrt(pow(B, 2) + pow(C, 2));
+    double flSpeed = sqrt(pow(B, 2) + pow(D, 2));
+    double blSpeed = sqrt(pow(A, 2) + pow(D, 2));
+    double brSpeed = sqrt(pow(A, 2) + pow(C, 2));
 
-    std::vector<double> speeds = {topRightSpeed, bottomLeftSpeed};
-    speeds = normalizeSpeeds(speeds);
+    double frAngle = atan2(B, C) * 180 / PI;
+    double flAngle = atan2(B, D) * 180 / PI;
+    double blAngle = atan2(A, D) * 180 / PI;
+    double brAngle = atan2(A, C) * 180 / PI;
 
-    double topRightSpeedNormalized = speeds[0];
-    double bottomLeftSpeedNormalized = speeds[1];
+    frAngle = right->wrapNeg180To180(frAngle);
+    flAngle = right->wrapNeg180To180(flAngle);
+    blAngle = right->wrapNeg180To180(blAngle);
+    brAngle = right->wrapNeg180To180(brAngle);
 
-    moduleState topRight = {topRightSpeedNormalized, topRightAngle};
-    moduleState bottomLeft = {bottomLeftSpeedNormalized, bottomLeftAngle};
+    std::vector<double> speeds = {frSpeed, blSpeed};
+    // speeds = normalizeSpeeds(speeds);
 
-    moduleState optimizedTopRight = optimize(topRight, right->getState());
-    moduleState optimizedBottomLeft = optimize(bottomLeft, left->getState());
+    double frSpeedNormalized = speeds[0];
+    double blSpeedNormalized = speeds[1];
 
-    return {optimizedTopRight, optimizedBottomLeft};
+    moduleState FR = {frSpeedNormalized, frAngle};
+    moduleState BL = {blSpeedNormalized, blAngle};
+
+    moduleState optimizedFR = optimize(FR, right->getState());
+    moduleState optimizedBL = optimize(BL, left->getState());
+
+    return {optimizedFR, optimizedBL};
 }
 
 moduleState Drivetrain::optimize(moduleState desiredState, moduleState currentState) {
@@ -65,11 +79,13 @@ moduleState Drivetrain::optimize(moduleState desiredState, moduleState currentSt
     return newState;
 }
 
-void Drivetrain::drive(double vx, double vy, double omega) {
+std::vector<moduleState> Drivetrain::drive(double vx, double vy, double omega) {
     std::vector<moduleState> states = toSwerveModuleStates(vx, vy, omega);
 
+    lastModuleStates = {states[0].toString(), states[1].toString()};
+
     right->setDesiredState(states[0]);
-    // left->setDesiredState(states[1]);
+    left->setDesiredState(states[1]);
 }
 
 std::vector<double> Drivetrain::normalizeSpeeds(std::vector<double> speeds) {
@@ -85,5 +101,5 @@ std::vector<double> Drivetrain::normalizeSpeeds(std::vector<double> speeds) {
 
 void Drivetrain::stop() {
     right->stop();
-    // left->stop();
+    left->stop();
 }

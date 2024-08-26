@@ -15,8 +15,8 @@ DCDriver2PWM bottom2Driver = DCDriver2PWM(MOTOR3_A, MOTOR3_B);
 
 Encoder top1Encoder = Encoder(4, 5, 1050);
 Encoder bottom1Encoder = Encoder(2, 35, 1050);
-Encoder top2Encoder = Encoder(TX, RX, 1050);
-Encoder bottom2Encoder = Encoder(36, 39, 1050);
+Encoder top2Encoder = Encoder(16, 36, 1050);
+Encoder bottom2Encoder = Encoder(34, 39, 1050);
 
 std::vector<double> top1Constants = {10.0, 5.0, 0};
 std::vector<double> bottom1Constants = {10.0, 5.0, 0};
@@ -25,8 +25,8 @@ std::vector<double> bottom2Constants = {10.0, 5.0, 0};
 
 Motor top1 = Motor(4, 5, top1Constants, &rawtop1, &top1Driver, &top1Encoder);
 Motor bottom1 = Motor(2, 35, bottom1Constants, &rawbottom1, &bottom1Driver, &bottom1Encoder);
-Motor top2 = Motor(TX, RX, top2Constants, &rawtop2, &top2Driver, &top2Encoder);
-Motor bottom2 = Motor(36, 39, bottom2Constants, &rawbottom2, &bottom2Driver, &bottom2Encoder);
+Motor top2 = Motor(36, 16, top2Constants, &rawtop2, &top2Driver, &top2Encoder);
+Motor bottom2 = Motor(39, 49, bottom2Constants, &rawbottom2, &bottom2Driver, &bottom2Encoder);
 
 Module right(&top1, &bottom1, RIGHT);
 Module left(&top2, &bottom2, LEFT);
@@ -84,13 +84,13 @@ void setup() {
 
   top1Encoder.enableInterrupts(top1A, top1B);
   bottom1Encoder.enableInterrupts(bottom1A, bottom1B);
-  // top2Encoder.enableInterrupts(top2A, top2B);
-  // bottom2Encoder.enableInterrupts(bottom2A, bottom2B);
+  top2Encoder.enableInterrupts(top2A, top2B);
+  bottom2Encoder.enableInterrupts(bottom2A, bottom2B);
 
   top1Encoder.init();
   bottom1Encoder.init();
-  // top2Encoder.init();
-  // bottom2Encoder.init();
+  top2Encoder.init();
+  bottom2Encoder.init();
 
   drivetrain.begin();
 }
@@ -98,20 +98,28 @@ void setup() {
 void loop() {
   drivetrain.loop();
 
-  double vxf = 0;
-  double vyf = 0;
-  double omega = 0;
+  Serial.println(left.getModuleOrientation());
 
-  if (PestoLink.update()) {
-    vxf = -applyDeadband(PestoLink.getAxis(0), 0.1);
-    vyf = applyDeadband(PestoLink.getAxis(1), 0.1);
-    omega = applyDeadband(PestoLink.getAxis(2), 0.1);
+  // std::vector<moduleState> states = {};
 
-    if (vxf != 0 || vyf != 0 || omega != 0) {
-      drivetrain.drive(vxf, vyf, omega);
-    }
-    else {
-      drivetrain.stop();
-    }
-  }
+  // double vxf = 0;
+  // double vyf = 0;
+  // double omega = 0;
+
+  // if (PestoLink.update()) {
+  //   vxf = applyDeadband(PestoLink.getAxis(0), 0.1);
+  //   vyf = applyDeadband(PestoLink.getAxis(1), 0.1);
+  //   omega = applyDeadband(PestoLink.getAxis(2), 0.1);
+
+  //   if (vxf != 0 || vyf != 0 || omega != 0) {
+  //     states = drivetrain.drive(vxf, vyf, omega);
+  //   }
+  //   else {
+  //     drivetrain.stop();
+  //   }
+  // }
+  
+  // if (states.size() > 0) {
+  //   Serial.println(String(states[0].angle) + " / " + String(states[1].angle));
+  // }
 }

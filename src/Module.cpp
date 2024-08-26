@@ -8,7 +8,7 @@ Module::Module(Motor* top, Motor* bottom, moduleID id) :
 
 void Module::setDesiredState(moduleState state) {
     double angleSpeed = getMotorSpeedsForAngle(state.angle);
-    double speedSpeed = -getMotorSpeedsForSpeed(state.speed);
+    double speedSpeed = getMotorSpeedsForSpeed(state.speed);
 
     double top1 = angleSpeed + speedSpeed;
     double bottom1 = angleSpeed - speedSpeed;
@@ -25,10 +25,8 @@ void Module::stop() {
 void Module::begin() {
     top->begin();
     bottom->begin();
-    bottom->setInverted(true);
 
-    trapezoidalProfile.init();
-    trapezoidalProfile.setInitPosition(0);
+    bottom->setInverted(true);
 }
 
 void Module::loop() {
@@ -44,7 +42,23 @@ double Module::getModuleOrientation() {
 
     double angleInDegrees = angleInRads * 180 / PI;
 
-    double finalAngle = angleInDegrees * getErrorModifier(90, 74.53);
+    if (id == LEFT) {
+        angleInDegrees *= -1;
+    }
+
+    double errorModifierRight = getErrorModifier(90, 74.53);
+    double errorModifierLeft = getErrorModifier(90, 74.91);
+
+    double finalAngle = angleInDegrees;
+
+    switch (id) {
+        case RIGHT:
+            finalAngle *= errorModifierRight;
+            break;
+        case LEFT:
+            finalAngle *= errorModifierLeft;
+            break;
+    }
 
     return wrapNeg180To180(finalAngle);
 }

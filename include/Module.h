@@ -2,24 +2,42 @@
 #define MODULE_H
 
 #include <Motor.h>
-#include <MotionGenerator.h>
 
+
+/**
+ * @brief Represents the state of a module with speed and angle.
+ */
 struct moduleState {
-    double speed;
-    double angle;
+    double speed; ///< Speed of the module
+    double angle; ///< Angle of the module
 
+    /**
+     * @brief Constructs a new moduleState object.
+     * 
+     * @param speed The speed of the module.
+     * @param angle The angle of the module.
+     */
     moduleState(double speed, double angle) :
         speed(speed),
         angle(angle)
     {}
 
+    /**
+     * @brief Converts the module state to a string representation.
+     * 
+     * @return A string representing the speed and angle of the module.
+     */
     String toString() {
         return "Speed: " + String(speed) + " Angle: " + String(angle);
     }
 };
 
+/**
+ * @brief Enum for module identifiers.
+ */
 enum moduleID {
-    LEFT, RIGHT
+    LEFT, ///< Left module
+    RIGHT ///< Right module
 };
 
 class Module {
@@ -41,6 +59,8 @@ class Module {
         double getProfileState();
         double getErrorModifier(double expected, double actual);
 
+        void setInverted(bool inverted);
+
         void loop();
 
         moduleID id;
@@ -52,8 +72,6 @@ class Module {
 
         double wheelRadius = 0.05;
         double gearRatio = 0.4;
-
-        MotionGenerator trapezoidalProfile = MotionGenerator(30, 100, 0);
 
         float profilePos = 0;
         double angleTarget = 0;

@@ -8,7 +8,7 @@
 class Drivetrain {
     public:
         Drivetrain(Module* left, Module* right);
-        void drive(double vx, double vy, double omega);
+        std::vector<moduleState> drive(double vx, double vy, double omega);
         std::vector<moduleState> toSwerveModuleStates(double vx, double vy, double omega);
         void stop();
         void begin();
@@ -17,12 +17,14 @@ class Drivetrain {
         moduleState optimize(moduleState desiredState, moduleState currentState);
         std::vector<double> normalizeSpeeds(std::vector<double> speeds);
 
+        std::vector<String> lastModuleStates = {"", ""};
+
     private:
         Module* left;
         Module* right;
 
-        double LENGTH = 0.5;
-        double WIDTH = 0.5;
+        double LENGTH = 4.5; //in
+        double WIDTH = 4.5; //in
 
 };
 
