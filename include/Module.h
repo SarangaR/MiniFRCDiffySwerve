@@ -79,7 +79,7 @@ class Module {
 
         bool alreadyDone = false;
 
-        PIDController pid = PIDController(0.5, 0.0, 0.0, 0.0, 26.18);
+        PIDController pid = PIDController();
 };
 
 #endif // MODULE_H

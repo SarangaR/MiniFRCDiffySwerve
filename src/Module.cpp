@@ -25,7 +25,14 @@ void Module::stop() {
 void Module::begin() {
     top->begin();
     bottom->begin();
-
+    bottom->setInverted(false);
+    top->setInverted(false);
+    if (id == LEFT) {
+        pid = PIDController(0.45, 0.0, 0.0, 0.0, 26.18);
+    }
+    else {
+        pid = PIDController(0.5, 0.0, 0.0, 0.0, 26.18);
+    }
     bottom->setInverted(true);
 }
 
@@ -41,10 +48,6 @@ double Module::getModuleOrientation() {
     double angleInRads = (topAngleRads - bottomAngleRads) / 2;
 
     double angleInDegrees = angleInRads * 180 / PI;
-
-    if (id == LEFT) {
-        angleInDegrees *= -1;
-    }
 
     double errorModifierRight = getErrorModifier(90, 74.53);
     double errorModifierLeft = getErrorModifier(90, 74.91);
@@ -79,14 +82,18 @@ double Module::getProfileState() {
 double Module::getMotorSpeedsForAngle(double angleDegrees) {
     angleTarget = angleDegrees;
     double error = angleDegrees - getModuleOrientation();
+    Serial.println(String(angleDegrees) + " " + String(getModuleOrientation()) + " " + String(error));
     double pidOutput = pid(error);
+    double finalOut = 0;
 
     if (fabs(pidOutput) > 0.2*26) {
-        return pidOutput;
+        finalOut = pidOutput;
     }
-    else {
-        return 0;
+    else{
+        finalOut = 0;
     }
+
+    return finalOut;
 }
 
 double Module::getMotorSpeedsForSpeed(double speedMetersPerSecond) {

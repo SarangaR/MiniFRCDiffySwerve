@@ -18,10 +18,10 @@ Encoder bottom1Encoder = Encoder(2, 35, 1050);
 Encoder top2Encoder = Encoder(16, 36, 1050);
 Encoder bottom2Encoder = Encoder(34, 39, 1050);
 
-std::vector<double> top1Constants = {10.0, 5.0, 0};
-std::vector<double> bottom1Constants = {10.0, 5.0, 0};
-std::vector<double> top2Constants = {10.0, 5.0, 0};
-std::vector<double> bottom2Constants = {10.0, 5.0, 0};
+std::vector<double> top1Constants = {5.0, 5.0, 0};
+std::vector<double> bottom1Constants = {5.0, 5.0, 0};
+std::vector<double> top2Constants = {5.0, 5.0, 0};
+std::vector<double> bottom2Constants = {5.0, 5.0, 0};
 
 Motor top1 = Motor(4, 5, top1Constants, &rawtop1, &top1Driver, &top1Encoder);
 Motor bottom1 = Motor(2, 35, bottom1Constants, &rawbottom1, &bottom1Driver, &bottom1Encoder);
@@ -34,6 +34,8 @@ Module left(&top2, &bottom2, LEFT);
 Drivetrain drivetrain(&left, &right);
 
 double start = 0;
+
+bool first = true;
 
 void top1A() {
   top1Encoder.handleA();
@@ -98,28 +100,26 @@ void setup() {
 void loop() {
   drivetrain.loop();
 
-  Serial.println(left.getModuleOrientation());
+  std::vector<moduleState> states = {};
 
-  // std::vector<moduleState> states = {};
+  double vxf = 0;
+  double vyf = 0;
+  double omega = 0;
 
-  // double vxf = 0;
-  // double vyf = 0;
-  // double omega = 0;
+  if (PestoLink.update()) {
+    vxf = applyDeadband(PestoLink.getAxis(0), 0.1);
+    vyf = applyDeadband(PestoLink.getAxis(1), 0.1);
+    omega = applyDeadband(PestoLink.getAxis(2), 0.1);
 
-  // if (PestoLink.update()) {
-  //   vxf = applyDeadband(PestoLink.getAxis(0), 0.1);
-  //   vyf = applyDeadband(PestoLink.getAxis(1), 0.1);
-  //   omega = applyDeadband(PestoLink.getAxis(2), 0.1);
-
-  //   if (vxf != 0 || vyf != 0 || omega != 0) {
-  //     states = drivetrain.drive(vxf, vyf, omega);
-  //   }
-  //   else {
-  //     drivetrain.stop();
-  //   }
-  // }
+    if (vxf != 0 || vyf != 0 || omega != 0) {
+      states = drivetrain.drive(vxf, vyf, omega);
+    }
+    else {
+      drivetrain.stop();
+    }
+  }
   
-  // if (states.size() > 0) {
-  //   Serial.println(String(states[0].angle) + " / " + String(states[1].angle));
-  // }
+  if (states.size() > 0) {
+    Serial.println(String(states[0].angle) + " / " + String(states[1].angle));
+  }
 }

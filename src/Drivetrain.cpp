@@ -51,13 +51,13 @@ std::vector<moduleState> Drivetrain::toSwerveModuleStates(double vxf, double vyf
     brAngle = right->wrapNeg180To180(brAngle);
 
     std::vector<double> speeds = {frSpeed, blSpeed};
-    // speeds = normalizeSpeeds(speeds);
+    speeds = normalizeSpeeds(speeds);
 
     double frSpeedNormalized = speeds[0];
     double blSpeedNormalized = speeds[1];
 
     moduleState FR = {frSpeedNormalized, frAngle};
-    moduleState BL = {blSpeedNormalized, blAngle};
+    moduleState BL = {blSpeedNormalized, -blAngle};
 
     moduleState optimizedFR = optimize(FR, right->getState());
     moduleState optimizedBL = optimize(BL, left->getState());
@@ -86,6 +86,8 @@ std::vector<moduleState> Drivetrain::drive(double vx, double vy, double omega) {
 
     right->setDesiredState(states[0]);
     left->setDesiredState(states[1]);
+
+    return states;
 }
 
 std::vector<double> Drivetrain::normalizeSpeeds(std::vector<double> speeds) {
