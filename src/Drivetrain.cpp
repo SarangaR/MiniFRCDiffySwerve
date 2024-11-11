@@ -1,107 +1,138 @@
 #include <Drivetrain.h>
 
-Drivetrain::Drivetrain(Module* left, Module* right) :
+Drivetrain::Drivetrain(Module* left, Module* right, Module* center) :
     left(left),
-    right(right)
+    right(right),
+    center(center)
 {}
 
 void Drivetrain::begin() {
     left->begin();
     right->begin();
+    center->begin();
+
+    // for (int i = 0; i < numModules; i++) {
+    //     inverseKinematics.row(i*2 + 0) = Eigen::Vector3d(1, 0, -modulePositions[i].y());
+    //     inverseKinematics.row(i*2 + 1) = Eigen::Vector3d(0, 1, modulePositions[i].x());
+    // }
+    // forwardKinematics = inverseKinematics.inverse();
 }
 
-double Drivetrain::getGyroAngle() {
+float Drivetrain::getGyroAngle() {
     //TODO: Implement this
-    double gyroAngle = 0;
+    Angle gyroAngle = Angle(0, DEGREES);
 
-    return right->wrapNeg180To180(gyroAngle);
+    return gyroAngle.wrapNeg180To180().getRadians();
 }
 
 void Drivetrain::loop() {
     left->loop();
     right->loop();
+    center->loop();
 }
 
-std::vector<moduleState> Drivetrain::toSwerveModuleStates(double vxf, double vyf, double omega) {
-    double gyroAngle = getGyroAngle();
-    double temp = vyf * cos(gyroAngle) + vxf * sin(gyroAngle);
-    double vx = -vyf * sin(gyroAngle) + vxf * cos(gyroAngle);
-    double vy = temp;
+std::array<moduleState, 3> Drivetrain::toSwerveModuleStates(float vxf, float vyf, float omega, Angle angle, bool fieldOriented, HWCDC *serial) {
+    float gyroAngle = fieldOriented ? angle.wrapNeg180To180().getRadians() : 0;
 
-    double R = sqrt(pow(LENGTH, 2) + pow(WIDTH, 2));
+    // Rotate velocities by gyro angle if in field-oriented mode
+    float vx = vxf * cos(gyroAngle) + vyf * sin(gyroAngle);
+    float vy = -vxf * sin(gyroAngle) + vyf * cos(gyroAngle);
 
-    double A = vx - omega * (LENGTH/R);
-    double B = vx  + omega * (LENGTH/R);
-    double C = vy - omega * (WIDTH/R);
-    double D = vy + omega * (WIDTH/R);
+    std::array<moduleState, 3> moduleStates = {
+        moduleState(0, 0),
+        moduleState(0, 0),
+        moduleState(0, 0),
+    };
 
-    double frSpeed = sqrt(pow(B, 2) + pow(C, 2));
-    double flSpeed = sqrt(pow(B, 2) + pow(D, 2));
-    double blSpeed = sqrt(pow(A, 2) + pow(D, 2));
-    double brSpeed = sqrt(pow(A, 2) + pow(C, 2));
+    // Loop over each module to calculate its speed and angle
+    for (size_t i = 0; i < numModules; i++) {
+        // Module position offsets
+        float moduleX = modulePositions[i].x();
+        float moduleY = modulePositions[i].y();
 
-    double frAngle = atan2(B, C) * 180 / PI;
-    double flAngle = atan2(B, D) * 180 / PI;
-    double blAngle = atan2(A, D) * 180 / PI;
-    double brAngle = atan2(A, C) * 180 / PI;
+        // Compute the velocity components for each module
+        float moduleVx = vx - omega * moduleY;
+        float moduleVy = vy + omega * moduleX;
 
-    frAngle = right->wrapNeg180To180(frAngle);
-    flAngle = right->wrapNeg180To180(flAngle);
-    blAngle = right->wrapNeg180To180(blAngle);
-    brAngle = right->wrapNeg180To180(brAngle);
+        // Compute speed and angle for each module
+        float speed = hypot(moduleVx, moduleVy); // Calculate the module's speed
+        Angle moduleAngle = (speed > 1e-6) ? Angle(moduleVx, moduleVy) : getModuleOrientations()[i];
 
-    std::vector<double> speeds = {frSpeed, blSpeed};
-    speeds = normalizeSpeeds(speeds);
-
-    double frSpeedNormalized = speeds[0];
-    double blSpeedNormalized = speeds[1];
-
-    moduleState FR = {frSpeedNormalized, frAngle};
-    moduleState BL = {blSpeedNormalized, -blAngle};
-
-    moduleState optimizedFR = optimize(FR, right->getState());
-    moduleState optimizedBL = optimize(BL, left->getState());
-
-    return {optimizedFR, optimizedBL};
-}
-
-moduleState Drivetrain::optimize(moduleState desiredState, moduleState currentState) {
-    moduleState newState = moduleState(0, 0); 
-    float delta = currentState.angle - desiredState.angle;
-    if (fabs(delta) > 90.0) {
-        newState.speed = -desiredState.speed;
-        newState.angle = right->wrapNeg180To180(desiredState.angle + 180.0);
+        // Set module state with speed and angle
+        moduleStates[i] = moduleState(speed, moduleAngle.wrapNeg180To180().getDegrees());
     }
-    else {
-        newState.speed = desiredState.speed;
-        newState.angle = desiredState.angle;
-    }
-    return newState;
+
+    return moduleStates;
 }
+ 
+std::array<moduleState, 3> Drivetrain::optimize(std::array<moduleState, 3> desiredStates, std::array<moduleState, 3> currentStates) {
+    std::array<moduleState, 3> newStates = {moduleState(0, 0), moduleState(0, 0), moduleState(0, 0)};
+    for (int i = 0; i < desiredStates.size(); i++) {
+        moduleState desiredState = desiredStates[i];
+        moduleState currentState = currentStates[i];
+        moduleState newState = moduleState(0, 0); 
+        Angle delta = Angle(currentState.angle, DEGREES) - Angle(desiredState.angle, DEGREES);
+        if (fabs(delta.wrapNeg180To180().getDegrees()) > 90.0f) {
+            newState.speed = -desiredState.speed;
+            newState.angle = Angle(desiredState.angle + 180, DEGREES).wrapNeg180To180().getDegrees();
+        }
+        else {
+            newState.speed = desiredState.speed;
+            newState.angle = desiredState.angle;
+        }
+        newStates[i] = newState;
+    }
+    return newStates;
+} 
 
-std::vector<moduleState> Drivetrain::drive(double vx, double vy, double omega) {
-    std::vector<moduleState> states = toSwerveModuleStates(vx, vy, omega);
+std::array<moduleState, 3> Drivetrain::drive(float vx, float vy, float omega, Angle gyroAngle, bool fieldOriented, HWCDC *serial) {
+    std::array<moduleState, 3> states = toSwerveModuleStates(vx, vy, omega, gyroAngle, fieldOriented, serial);
 
-    lastModuleStates = {states[0].toString(), states[1].toString()};
+    lastModuleStates = {states[0].toString(), states[1].toString(), states[2].toString()};
 
-    right->setDesiredState(states[0]);
-    left->setDesiredState(states[1]);
+    left->setDesiredState(states[0]);
+    right->setDesiredState(states[1]);
+    center->setDesiredState(states[2]);
 
     return states;
 }
 
-std::vector<double> Drivetrain::normalizeSpeeds(std::vector<double> speeds) {
-    double max = *std::max_element(speeds.begin(), speeds.end());
+std::array<moduleState, 3> Drivetrain::normalizeSpeeds(std::array<moduleState, 3> states) {
+    std::vector<float> speeds;
+    for (int i = 0; i < states.size(); i++) {
+        speeds.push_back(states[i].speed);
+    }
+
+    float max = *std::max_element(speeds.begin(), speeds.end());
     if (max > 1) {
         for (int i = 0; i < speeds.size(); i++) {
             speeds[i] /= max;
         }
     }
 
-    return speeds;
+    std::array<moduleState, 3> normalizedStates = {moduleState(0, 0), moduleState(0, 0), moduleState(0, 0)};
+
+    for (int i = 0; i < states.size(); i++) {
+        normalizedStates[i] = moduleState(speeds[i], states[i].angle);
+    } 
+
+    return normalizedStates;
+}
+
+std::vector<Angle> Drivetrain::getModuleOrientations() {
+    return {left->getModuleOrientation(), right->getModuleOrientation(), center->getModuleOrientation()};
+}
+
+std::vector<float> Drivetrain::getModuleSpeeds() {
+    return {left->getModuleSpeed(), right->getModuleSpeed(), center->getModuleSpeed()};
+}
+
+std::array<moduleState, 3> Drivetrain::getModuleStates() {
+    return {left->getState(), right->getState(), center->getState()};
 }
 
 void Drivetrain::stop() {
     right->stop();
     left->stop();
+    center->stop();
 }

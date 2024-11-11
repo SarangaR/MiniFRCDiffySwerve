@@ -7,32 +7,26 @@ Module::Module(Motor* top, Motor* bottom, moduleID id) :
 {}
 
 void Module::setDesiredState(moduleState state) {
-    double angleSpeed = getMotorSpeedsForAngle(state.angle);
-    double speedSpeed = getMotorSpeedsForSpeed(state.speed);
+    float angleSpeed = getMotorSpeedsForAngle(state.angle);
+    float speedSpeed = getMotorSpeedsForSpeed(state.speed);
 
-    double top1 = angleSpeed + speedSpeed;
-    double bottom1 = angleSpeed - speedSpeed;
+    Angle top1 = Angle(angleSpeed + speedSpeed);
+    Angle bottom1 = Angle(-(angleSpeed - speedSpeed));
 
     top->setVelocity(top1);
     bottom->setVelocity(bottom1);
 }
 
 void Module::stop() {
-    top->setVelocity(0);
-    bottom->setVelocity(0);
+    top->setVelocity(Angle(0));
+    bottom->setVelocity(Angle(0));
 }
 
 void Module::begin() {
     top->begin();
     bottom->begin();
-    bottom->setInverted(false);
     top->setInverted(false);
-    if (id == LEFT) {
-        pid = PIDController(0.45, 0.0, 0.0, 0.0, 26.18);
-    }
-    else {
-        pid = PIDController(0.5, 0.0, 0.0, 0.0, 26.18);
-    }
+    pid.reset();
     bottom->setInverted(true);
 }
 
@@ -41,65 +35,48 @@ void Module::loop() {
     bottom->loop();
 }
 
-double Module::getModuleOrientation() {
-    double topAngleRads = top->getPosition();
-    double bottomAngleRads = bottom->getPosition();
+Angle Module::getModuleOrientation() {
+    float topMotorAngle = top->getPosition().getRadians();
+    float bottomMotorAngle = bottom->getPosition().getRadians();
 
-    double angleInRads = (topAngleRads - bottomAngleRads) / 2;
+    float topModuleAngle = -topMotorAngle * gearRatioTurn;
+    float bottomModuleAngle = bottomMotorAngle * gearRatioTurn;
 
-    double angleInDegrees = angleInRads * 180 / PI;
+    Angle angle = Angle((topModuleAngle + bottomModuleAngle) / 2, RADIANS);
 
-    double errorModifierRight = getErrorModifier(90, 74.53);
-    double errorModifierLeft = getErrorModifier(90, 74.91);
-
-    double finalAngle = angleInDegrees;
-
-    switch (id) {
-        case RIGHT:
-            finalAngle *= errorModifierRight;
-            break;
-        case LEFT:
-            finalAngle *= errorModifierLeft;
-            break;
-    }
-
-    return wrapNeg180To180(finalAngle);
+    return angle.wrapNeg180To180();
 }
 
-double Module::getModuleSpeed() {
-    double topSpeed = top->getVelocityRads();
-    double bottomSpeed = bottom->getVelocityRads();
+float Module::getModuleSpeed() {
+    float topMotorSpeed = top->getVelocity().getRadians();
+    float bottomMotorSpeed = bottom->getVelocity().getRadians();
 
-    double speed = (topSpeed + bottomSpeed) / 2;
+    float topSpeed = topMotorSpeed * gearRatioSpin;
+    float bottomSpeed = bottomMotorSpeed * gearRatioSpin;
 
-    return speed;
+    Angle speed = Angle((topSpeed + bottomSpeed) / 2);
+
+    //convert from rad/s to m/s
+    float speedMetersPerSecond = speed.getRadians() * wheelRadius;
+
+    return speedMetersPerSecond;
 }
 
-double Module::getProfileState() {
+float Module::getProfileState() {
     return profilePos;
 }
 
-double Module::getMotorSpeedsForAngle(double angleDegrees) {
+float Module::getMotorSpeedsForAngle(float angleDegrees) {
     angleTarget = angleDegrees;
-    double error = angleDegrees - getModuleOrientation();
-    Serial.println(String(angleDegrees) + " " + String(getModuleOrientation()) + " " + String(error));
-    double pidOutput = pid(error);
-    double finalOut = 0;
-
-    if (fabs(pidOutput) > 0.2*26) {
-        finalOut = pidOutput;
-    }
-    else{
-        finalOut = 0;
-    }
-
-    return finalOut;
+    float error = angleDegrees - getModuleOrientation().getDegrees();
+    float pidOutput = pid(error);
+    
+    return pidOutput / gearRatioTurn;
 }
 
-double Module::getMotorSpeedsForSpeed(double speedMetersPerSecond) {
-    double wheelCircumference = 2 * PI * wheelRadius;
-    double speedRadsPerSec = speedMetersPerSecond / wheelCircumference;
-    double finalSpeed = speedRadsPerSec / gearRatio;
+float Module::getMotorSpeedsForSpeed(float speedMetersPerSecond) {
+    float speedRadsPerSec = speedMetersPerSecond / wheelRadius;
+    float finalSpeed = speedRadsPerSec / gearRatioSpin;
 
     speedTarget = finalSpeed;
 
@@ -107,28 +84,18 @@ double Module::getMotorSpeedsForSpeed(double speedMetersPerSecond) {
 }
 
 moduleState Module::getState() {
-    double angle = getModuleOrientation();
-    double speed = getModuleSpeed();
+    float angle = getModuleOrientation().getDegrees();
+    float speed = getModuleSpeed();
 
     return moduleState(speed, angle);
 }
 
-double Module::rotateAngleBy(double angle, double angleToRotateBy) {
-    double newAngle = angle + angleToRotateBy;
-    return wrapNeg180To180(newAngle);
+float Module::rotateAngleBy(float angle, float angleToRotateBy) {
+    float newAngle = angle + angleToRotateBy;
+    return Angle(newAngle, DEGREES).wrap().getDegrees();
 }
 
-double Module::wrap0To360(double angle) {
-    if (angle < 0) {
-        angle += 360;
-    }
-    else if (angle >= 360) {
-        angle -= 360;
-    }
-    return angle;
-}
-
-double Module::wrapNeg180To180(double angle) {
+float Module::wrapNeg180To180(float angle) {
     if (angle > 180) {
         angle -= 360;
     }
@@ -138,12 +105,12 @@ double Module::wrapNeg180To180(double angle) {
     return angle;
 }
 
-double Module::getError(double degrees) {
-    return degrees - getModuleOrientation();
+float Module::getError(float degrees) {
+    return degrees - getModuleOrientation().getDegrees();
 }
 
-double Module::getErrorModifier(double expected, double actual) {
-    double modifier = expected / actual;
+float Module::getErrorModifier(float expected, float actual) {
+    float modifier = expected / actual;
     return modifier;
 }
 

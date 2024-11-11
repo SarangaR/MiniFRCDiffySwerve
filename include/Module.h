@@ -8,8 +8,8 @@
  * @brief Represents the state of a module with speed and angle.
  */
 struct moduleState {
-    double speed; ///< Speed of the module
-    double angle; ///< Angle of the module
+    float speed; ///< Speed of the module
+    float angle; ///< Angle of the module
 
     /**
      * @brief Constructs a new moduleState object.
@@ -17,18 +17,23 @@ struct moduleState {
      * @param speed The speed of the module.
      * @param angle The angle of the module.
      */
-    moduleState(double speed, double angle) :
+    moduleState(float speed, float angle) :
         speed(speed),
         angle(angle)
     {}
 
+    float roundPlaces(float value, int places) {
+        float factor = pow(10, places);
+        return round(value * factor) / factor;
+    }
+    
     /**
      * @brief Converts the module state to a string representation.
      * 
      * @return A string representing the speed and angle of the module.
      */
     String toString() {
-        return "Speed: " + String(speed) + " Angle: " + String(angle);
+        return "Speed: " + String(roundPlaces(speed, 2)) + " Angle: " + String(roundPlaces(angle, 2));
     }
 };
 
@@ -37,7 +42,8 @@ struct moduleState {
  */
 enum moduleID {
     LEFT, ///< Left module
-    RIGHT ///< Right module
+    RIGHT, ///< Right module
+    CENTER ///< Center module
 };
 
 class Module {
@@ -46,40 +52,47 @@ class Module {
         void setDesiredState(moduleState state);
         void stop();
         void begin();
-        double getModuleOrientation();
-        double getModuleSpeed();
-        std::vector<double> rotateModule(double angle);
-        double getMotorSpeedsForAngle(double angleDegrees);
-        double getMotorSpeedsForSpeed(double speed);
+        Angle getModuleOrientation();
+        float getModuleSpeed();
+        std::vector<float> rotateModule(float angle);
+        float getMotorSpeedsForAngle(float angleDegrees);
+        float getMotorSpeedsForSpeed(float speed);
         moduleState getState();
-        double rotateAngleBy(double angle, double angleToRotateBy);
-        double wrap0To360(double angle);
-        double wrapNeg180To180(double angle);
-        double getError(double degrees);
-        double getProfileState();
-        double getErrorModifier(double expected, double actual);
+        float rotateAngleBy(float angle, float angleToRotateBy);
+        float wrapNeg180To180(float angle);
+        float getError(float degrees);
+        float getProfileState();
+        float getErrorModifier(float expected, float actual);
 
         void setInverted(bool inverted);
 
         void loop();
 
         moduleID id;
+
+        static constexpr float MAX_SPEED_SPIN_MS = 10.0f*M_PI * ((12.0f/30.0f)*(30.0f/10.0f)) * 0.05f;
     private:
         Motor* top;
         Motor* bottom;
 
-        double prevErrorAngle = 0;
+        float prevErrorAngle = 0;
 
-        double wheelRadius = 0.05;
-        double gearRatio = 0.4;
+        float wheelRadius = 2.5f/100.0f;
+        float gearRatioMotorToSun = 12.0f/30.0f;
+        float gearRatioSunToWheelTurn = 1.0f/0.5f;
+        float gearRatioTurn = gearRatioMotorToSun;
+        float gearRatioSunToWheelSpin = 30.0f/10.0f;
+        float gearRatioSpin = gearRatioMotorToSun * gearRatioSunToWheelSpin;
 
         float profilePos = 0;
-        double angleTarget = 0;
-        double speedTarget = 0;
+        float angleTarget = 0;
+        float speedTarget = 0;
 
         bool alreadyDone = false;
 
-        PIDController pid = PIDController();
+        float feedforwardGain = 4;
+
+        PIDController pid = PIDController(0.3f, 0.0f, 0.04f , 0.0f, top->MAX_SPEED.getRadians());
 };
 
 #endif // MODULE_H
