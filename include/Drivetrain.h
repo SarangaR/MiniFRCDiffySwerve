@@ -16,13 +16,11 @@ class Drivetrain {
         void begin();
         float getGyroAngle();
         void loop();
-        std::vector<Angle> getModuleOrientations();
-        std::vector<float> getModuleSpeeds();
+        std::array<Angle, 3> getModuleOrientations();
+        std::array<float, 3> getModuleSpeeds();
         std::array<moduleState, 3> getModuleStates();
         std::array<moduleState, 3> optimize(std::array<moduleState, 3> desiredStates, std::array<moduleState, 3> currentStates);
         std::array<moduleState, 3> normalizeSpeeds(std::array<moduleState, 3> speeds);
-
-        std::vector<String> lastModuleStates = {"", ""};
 
         //distance from wheel to wheel (trackwidth)
         float sideLength = 13.5f/100.0f; //m

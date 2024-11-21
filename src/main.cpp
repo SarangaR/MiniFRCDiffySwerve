@@ -66,12 +66,12 @@ void bottom3B() {
   bottom3Encoder.handleB();
 }
 
-std::vector<float> top1Constants = {5.0f, 5.0f, 0};
-std::vector<float> bottom1Constants = {5.0f, 5.0f, 0};
-std::vector<float> top2Constants = {5.0f, 5.0f, 0};
-std::vector<float> bottom2Constants = {5.0f, 5.0f, 0};
-std::vector<float> top3Constants = {5.0f, 5.0f, 0};
-std::vector<float> bottom3Constants = {5.0f, 5.0f, 0};
+std::array<float, 3> top1Constants = {5.0f, 5.0f, 0};
+std::array<float, 3> bottom1Constants = {5.0f, 5.0f, 0};
+std::array<float, 3> top2Constants = {5.0f, 5.0f, 0};
+std::array<float, 3> bottom2Constants = {5.0f, 5.0f, 0};
+std::array<float, 3> top3Constants = {5.0f, 5.0f, 0};
+std::array<float, 3> bottom3Constants = {5.0f, 5.0f, 0};
 
 Motor top1 = Motor(4, 5, top1Constants, &rawtop1, &top1Encoder);
 Motor bottom1 = Motor(2, 35, bottom1Constants, &rawbottom1, &bottom1Encoder);
@@ -159,6 +159,9 @@ void loop() {
     RSL::setState(RSL_ON);
   }
 
-  drivetrain.loop();
-  RSL::update();
+  // drivetrain.loop();
+  // RSL::update();
+  // top2.setVelocity(Angle(10*PI));
+  // bottom2.setVelocity(Angle(10*PI));
+  // rawbottom2.set(-1);
 }

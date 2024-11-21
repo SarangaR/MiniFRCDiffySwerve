@@ -1,6 +1,6 @@
 #include <Motor.h>
 
-Motor::Motor(int enc1, int enc2, std::vector<float> pidConstants, NoU_Motor* rawMotor, Encoder* sensor) :
+Motor::Motor(int enc1, int enc2, std::array<float, 3> pidConstants, NoU_Motor* rawMotor, Encoder* sensor) :
     enc1(enc1), enc2(enc2), pidConstants(pidConstants), rawMotor(rawMotor), sensor(sensor)
 {}
 
