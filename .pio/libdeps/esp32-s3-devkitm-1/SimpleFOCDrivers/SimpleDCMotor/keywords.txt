@@ -1,3 +1,0 @@
-SimpleFOC   KEYWORD1
-DCMotor     KEYWORD1
-
