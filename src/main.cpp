@@ -107,8 +107,8 @@ void setup() {
     while(!Serial);
   #endif
 
-  char *localName = "MiniFRCDiffySwerve";
-  PestoLink.begin(localName);
+  // char *localName = "MiniFRCDiffySwerve";
+  PestoLink.begin("MiniFRCDiffySwerve");
 
   for (int i = 0; i < 12; i++) {
     pinMode(encoderPins[i], INPUT);

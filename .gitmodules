@@ -1,3 +1,5 @@
 [submodule "lib/Alfredo-NoU3"]
 	path = lib/Alfredo-NoU3
 	url = https://github.com/SarangaR/Alfredo-NoU3.git
+[submodule "lib/Alfredo-NoU3/"]
+	update = rebase
