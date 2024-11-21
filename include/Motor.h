@@ -131,7 +131,7 @@ struct Angle {
 
 class Motor {
     public:
-        Motor(int enc1, int enc2, std::array<float, 3> pidConstants, NoU_Motor* rawMotor, Encoder* encoder);
+        Motor(int enc1, int enc2, std::vector<float> pidConstants, NoU_Motor* rawMotor, Encoder* encoder);
         void setVelocity(Angle velocity);
         void stop();
         Angle getVelocity();
@@ -150,7 +150,7 @@ class Motor {
 
         Angle MAX_SPEED = Angle(10*M_PI);
     private:
-        std::array<float, 3> pidConstants;
+        std::vector<float> pidConstants;
 };
 
 #endif // MOTOR_H

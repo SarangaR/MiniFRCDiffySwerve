@@ -54,7 +54,7 @@ class Module {
         void begin();
         Angle getModuleOrientation();
         float getModuleSpeed();
-        std::array<float, 3> rotateModule(float angle);
+        std::vector<float> rotateModule(float angle);
         float getMotorSpeedsForAngle(float angleDegrees);
         float getMotorSpeedsForSpeed(float speed);
         moduleState getState();

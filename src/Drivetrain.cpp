@@ -62,9 +62,6 @@ std::array<moduleState, 3> Drivetrain::toSwerveModuleStates(float vxf, float vyf
         moduleStates[i] = moduleState(speed, moduleAngle.wrapNeg180To180().getDegrees());
     }
 
-    // moduleStates = optimize(moduleStates, getModuleStates());
-    // moduleStates = normalizeSpeeds(moduleStates);
-
     return moduleStates;
 }
  
@@ -77,7 +74,7 @@ std::array<moduleState, 3> Drivetrain::optimize(std::array<moduleState, 3> desir
         Angle delta = Angle(currentState.angle, DEGREES) - Angle(desiredState.angle, DEGREES);
         if (fabs(delta.wrapNeg180To180().getDegrees()) > 90.0f) {
             newState.speed = -desiredState.speed;
-            newState.angle = Angle(desiredState.angle + 180.0f, DEGREES).wrapNeg180To180().getDegrees();
+            newState.angle = Angle(desiredState.angle + 180, DEGREES).wrapNeg180To180().getDegrees();
         }
         else {
             newState.speed = desiredState.speed;
@@ -91,6 +88,8 @@ std::array<moduleState, 3> Drivetrain::optimize(std::array<moduleState, 3> desir
 std::array<moduleState, 3> Drivetrain::drive(float vx, float vy, float omega, Angle gyroAngle, bool fieldOriented, HWCDC *serial) {
     std::array<moduleState, 3> states = toSwerveModuleStates(vx, vy, omega, gyroAngle, fieldOriented, serial);
 
+    lastModuleStates = {states[0].toString(), states[1].toString(), states[2].toString()};
+
     left->setDesiredState(states[0]);
     right->setDesiredState(states[1]);
     center->setDesiredState(states[2]);
@@ -99,24 +98,32 @@ std::array<moduleState, 3> Drivetrain::drive(float vx, float vy, float omega, An
 }
 
 std::array<moduleState, 3> Drivetrain::normalizeSpeeds(std::array<moduleState, 3> states) {
-    std::array<float, 3> speeds = {0, 0, 0};
-    float realMaxSpeed = 0;
-    for (moduleState state : states) {
-        realMaxSpeed = fmax(realMaxSpeed, fabs(state.speed));
+    std::vector<float> speeds;
+    for (int i = 0; i < states.size(); i++) {
+        speeds.push_back(states[i].speed);
     }
 
-    if (realMaxSpeed > Module::MAX_SPEED_SPIN_MS) {
-        for (int i = 0; i < states.size(); i++) {
-            states[i].speed = states[i].speed / realMaxSpeed * Module::MAX_SPEED_SPIN_MS;
+    float max = *std::max_element(speeds.begin(), speeds.end());
+    if (max > 1) {
+        for (int i = 0; i < speeds.size(); i++) {
+            speeds[i] /= max;
         }
     }
+
+    std::array<moduleState, 3> normalizedStates = {moduleState(0, 0), moduleState(0, 0), moduleState(0, 0)};
+
+    for (int i = 0; i < states.size(); i++) {
+        normalizedStates[i] = moduleState(speeds[i], states[i].angle);
+    } 
+
+    return normalizedStates;
 }
 
-std::array<Angle, 3> Drivetrain::getModuleOrientations() {
+std::vector<Angle> Drivetrain::getModuleOrientations() {
     return {left->getModuleOrientation(), right->getModuleOrientation(), center->getModuleOrientation()};
 }
 
-std::array<float, 3> Drivetrain::getModuleSpeeds() {
+std::vector<float> Drivetrain::getModuleSpeeds() {
     return {left->getModuleSpeed(), right->getModuleSpeed(), center->getModuleSpeed()};
 }
 
