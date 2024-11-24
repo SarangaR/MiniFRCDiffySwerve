@@ -26,6 +26,24 @@ struct moduleState {
         float factor = pow(10, places);
         return round(value * factor) / factor;
     }
+
+    moduleState optimize(moduleState desiredState, Angle currentAngle) {
+        auto delta = Angle(desiredState.angle, DEGREES) - currentAngle;
+        if (fabs(delta.wrapNeg180To180().getDegrees()) > 90.0f) {
+            return moduleState(-desiredState.speed, Angle(desiredState.angle, DEGREES).rotateBy(180, DEGREES).wrapNeg180To180().getDegrees());
+        }
+        else {
+            return moduleState(desiredState.speed, desiredState.angle);
+        }
+    }
+
+    void optimize(Angle currentAngle) {
+        auto delta = Angle(angle, DEGREES) - currentAngle;
+        if (fabs(delta.wrapNeg180To180().getDegrees()) > 90.0f) {
+            speed = -speed;
+            angle = Angle(angle, DEGREES).rotateBy(180, DEGREES).wrapNeg180To180().getDegrees();
+        }
+    }
     
     /**
      * @brief Converts the module state to a string representation.
@@ -63,6 +81,8 @@ class Module {
         float getError(float degrees);
         float getProfileState();
         float getErrorModifier(float expected, float actual);
+        void setInversion(bool topInverted, bool bottomInverted);
+        void setPID(float p, float i, float d);
 
         void setInverted(bool inverted);
 
@@ -91,6 +111,8 @@ class Module {
         bool alreadyDone = false;
 
         float feedforwardGain = 4;
+
+        bool inverted = false;
 
         PIDController pid = PIDController(0.3f, 0.0f, 0.04f , 0.0f, top->MAX_SPEED.getRadians());
 };

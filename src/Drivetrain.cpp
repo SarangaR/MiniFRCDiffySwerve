@@ -47,12 +47,12 @@ std::array<moduleState, 3> Drivetrain::toSwerveModuleStates(float vxf, float vyf
     // Loop over each module to calculate its speed and angle
     for (size_t i = 0; i < numModules; i++) {
         // Module position offsets
-        float moduleX = modulePositions[i].x();
+        float moduleX = modulePositions[i].x();    
         float moduleY = modulePositions[i].y();
 
         // Compute the velocity components for each module
-        float moduleVx = vx - omega * moduleY;
-        float moduleVy = vy + omega * moduleX;
+        float moduleVx = vx - omega * moduleX;
+        float moduleVy = vy + omega * moduleY;
 
         // Compute speed and angle for each module
         float speed = hypot(moduleVx, moduleVy); // Calculate the module's speed
@@ -60,6 +60,7 @@ std::array<moduleState, 3> Drivetrain::toSwerveModuleStates(float vxf, float vyf
 
         // Set module state with speed and angle
         moduleStates[i] = moduleState(speed, moduleAngle.wrapNeg180To180().getDegrees());
+        moduleStates[i].optimize(getModuleOrientations()[i]);
     }
 
     return moduleStates;

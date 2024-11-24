@@ -6,6 +6,10 @@
 #include <Alfredo_NoU3.h>
 #include <ESP32Encoder.h>
 
+#include "SensorFusion.h"
+
+SF fusion;
+
 #define DEBUG_MODE_SERIAL false
 
 NoU_Motor rawtop1(3);
@@ -18,7 +22,6 @@ NoU_Motor rawbottom3(6);
 float reduction_ratio = 50;
 float ppr = 7;
 float cpr = ppr * reduction_ratio;
-
 
 Encoder top1Encoder = Encoder(16, 15, cpr);
 Encoder bottom1Encoder = Encoder(11, 10, cpr);
@@ -89,7 +92,7 @@ Drivetrain drivetrain(&left, &right, &center);
 const float MAX_SPEED = Module::MAX_SPEED_SPIN_MS;
 const float CIRCUMFERENCE = 0.0254f * 5.0f * M_PI;
 const float ONE_ROTATION_S = CIRCUMFERENCE / MAX_SPEED;
-const float MAX_ROT = (2*M_PI) / ONE_ROTATION_S;
+const float MAX_ROT = 5*M_PI;
 
 float applyDeadband(float value, float deadband) {
   if (abs(value) < deadband) {
@@ -130,11 +133,19 @@ void setup() {
   
   RSL::initialize();
 
+  center.setInversion(false, false);
+  center.setPID(5.0f, 0.0, 0.04f);
+
+  right.setInversion(true, true);
+  right.setPID(5.0f, 0.0, 0.04f);
+
+  left.setInversion(false, true);
+  left.setPID(5.0f, 0.0, 0.04f);
+
   SerialPtr = &Serial;
 }
 
 Angle gyro = Angle(0, DEGREES);
-// Eigen::MatrixXd prev_matrix = Eigen::MatrixXd(3, 1);
 
 void loop() {
   float vxf = 0;
@@ -143,13 +154,12 @@ void loop() {
   if (PestoLink.update()) {
     RSL::setState(RSL_ENABLED);
     PestoLink.setBatteryVal(NoU3.getBatteryVoltage());
-    vxf = -applyDeadband(PestoLink.getAxis(1), 0.1);//*MAX_SPEED;
-    vyf = applyDeadband(PestoLink.getAxis(0), 0.1);//*MAX_SPEED;
-    omega = applyDeadband(PestoLink.getAxis(2), 0.1);//*MAX_ROT;
+    vxf = -applyDeadband(PestoLink.getAxis(1), 0.1);
+    vyf = applyDeadband(PestoLink.getAxis(0), 0.1);
+    omega = applyDeadband(PestoLink.getAxis(2), 0.1)*MAX_ROT;
 
     if (vxf != 0 || vyf != 0 || omega != 0) {
       auto statesPair = drivetrain.drive(vxf, vyf, omega, gyro, false, SerialPtr);
-      // Serial.println("Left: " + states[0].toString() + " Right: " + states[1].toString() + " Center: " + states[2].toString());
     }
     else {
       drivetrain.stop();

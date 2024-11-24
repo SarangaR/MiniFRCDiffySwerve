@@ -25,9 +25,7 @@ void Module::stop() {
 void Module::begin() {
     top->begin();
     bottom->begin();
-    top->setInverted(false);
     pid.reset();
-    bottom->setInverted(true);
 }
 
 void Module::loop() {
@@ -80,7 +78,17 @@ float Module::getMotorSpeedsForSpeed(float speedMetersPerSecond) {
 
     speedTarget = finalSpeed;
 
-    return finalSpeed;
+    if (id == CENTER) {
+        speedTarget = -speedTarget;
+    }
+    else if (id == RIGHT) {
+        speedTarget = speedTarget;
+    }
+    else if (id == LEFT) {
+        speedTarget = speedTarget;
+    }
+
+    return speedTarget;
 }
 
 moduleState Module::getState() {
@@ -114,3 +122,11 @@ float Module::getErrorModifier(float expected, float actual) {
     return modifier;
 }
 
+void Module::setInversion(bool topInverted, bool bottomInverted) {
+    top->setInverted(topInverted);
+    bottom->setInverted(bottomInverted);
+}
+
+void Module::setPID(float p, float i, float d) {
+    pid = PIDController(p, i, d, 0.0f, top->MAX_SPEED.getRadians());
+}
