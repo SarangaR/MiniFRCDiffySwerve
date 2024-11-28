@@ -114,3 +114,8 @@ float Module::getErrorModifier(float expected, float actual) {
     return modifier;
 }
 
+void Module::setMotorInvert(bool topInvert, bool bottomInvert) {
+    top->setInverted(topInvert);
+    bottom->setInverted(bottomInvert);
+}
+

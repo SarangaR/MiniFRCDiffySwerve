@@ -127,6 +127,9 @@ void setup() {
   bottom2Encoder.init();
   top3Encoder.init();
   bottom3Encoder.init();
+
+  left.setMotorInvert(false, true);
+  right.setMotorInvert(true, true);
   
   RSL::initialize();
 
@@ -134,7 +137,6 @@ void setup() {
 }
 
 Angle gyro = Angle(0, DEGREES);
-// Eigen::MatrixXd prev_matrix = Eigen::MatrixXd(3, 1);
 
 void loop() {
   float vxf = 0;
@@ -142,7 +144,7 @@ void loop() {
   float omega = 0;
   if (PestoLink.update()) {
     RSL::setState(RSL_ENABLED);
-    PestoLink.setBatteryVal(NoU3.getBatteryVoltage());
+    Serial.println(top1.getPosition().getDegrees());
     vxf = -applyDeadband(PestoLink.getAxis(1), 0.1);//*MAX_SPEED;
     vyf = applyDeadband(PestoLink.getAxis(0), 0.1);//*MAX_SPEED;
     omega = applyDeadband(PestoLink.getAxis(2), 0.1);//*MAX_ROT;

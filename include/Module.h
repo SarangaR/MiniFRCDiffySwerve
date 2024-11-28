@@ -65,6 +65,7 @@ class Module {
         float getErrorModifier(float expected, float actual);
 
         void setInverted(bool inverted);
+        void setMotorInvert(bool top, bool bottom);
 
         void loop();
 
@@ -92,7 +93,7 @@ class Module {
 
         float feedforwardGain = 4;
 
-        PIDController pid = PIDController(0.3f, 0.0f, 0.04f , 0.0f, top->MAX_SPEED.getRadians());
+        PIDController pid = PIDController(5.0f, 0.0f, 0.04f , 0.0f, top->MAX_SPEED.getRadians());
 };
 
 #endif // MODULE_H
