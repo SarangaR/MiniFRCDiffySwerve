@@ -5,8 +5,13 @@
 #include "Filters/Butterworth.hpp"
 #include <Alfredo_NoU3.h>
 #include <ESP32Encoder.h>
+#include <SparkFun_Qwiic_OTOS_Arduino_Library.h>
+#include <RobotPose.h>
 
 #define DEBUG_MODE_SERIAL false
+#define PIN_SDA_Q 33 //33
+#define PIN_SCL_Q 34 //34
+#define MAG_DEC 14.44504
 
 NoU_Motor rawtop1(3);
 NoU_Motor rawbottom1(4);
@@ -18,7 +23,6 @@ NoU_Motor rawbottom3(6);
 float reduction_ratio = 50;
 float ppr = 7;
 float cpr = ppr * reduction_ratio;
-
 
 Encoder top1Encoder = Encoder(16, 15, cpr);
 Encoder bottom1Encoder = Encoder(11, 10, cpr);
@@ -66,19 +70,12 @@ void bottom3B() {
   bottom3Encoder.handleB();
 }
 
-std::vector<float> top1Constants = {5.0f, 5.0f, 0};
-std::vector<float> bottom1Constants = {5.0f, 5.0f, 0};
-std::vector<float> top2Constants = {5.0f, 5.0f, 0};
-std::vector<float> bottom2Constants = {5.0f, 5.0f, 0};
-std::vector<float> top3Constants = {5.0f, 5.0f, 0};
-std::vector<float> bottom3Constants = {5.0f, 5.0f, 0};
-
-Motor top1 = Motor(4, 5, top1Constants, &rawtop1, &top1Encoder);
-Motor bottom1 = Motor(2, 35, bottom1Constants, &rawbottom1, &bottom1Encoder);
-Motor top2 = Motor(36, 16, top2Constants, &rawtop2, &top2Encoder);
-Motor bottom2 = Motor(39, 49, bottom2Constants, &rawbottom2, &bottom2Encoder);
-Motor top3 = Motor(14, 34, top3Constants, &rawtop3, &top3Encoder);
-Motor bottom3 = Motor(13, 12, bottom3Constants, &rawbottom3, &bottom3Encoder);
+Motor top1 = Motor(16, 15, &rawtop1, &top1Encoder);
+Motor bottom1 = Motor(11, 10, &rawbottom1, &bottom1Encoder);
+Motor top2 = Motor(41, 42, &rawtop2, &top2Encoder);
+Motor bottom2 = Motor(18, 17, &rawbottom2, &bottom2Encoder);
+Motor top3 = Motor(38, 37, &rawtop3, &top3Encoder);
+Motor bottom3 = Motor(40, 39, &rawbottom3, &bottom3Encoder);
 
 Module right(&top1, &bottom1, RIGHT);
 Module left(&top2, &bottom2, LEFT);
@@ -87,9 +84,6 @@ Module center(&top3, &bottom3, CENTER);
 Drivetrain drivetrain(&left, &right, &center);
 
 const float MAX_SPEED = Module::MAX_SPEED_SPIN_MS;
-const float CIRCUMFERENCE = 0.0254f * 5.0f * M_PI;
-const float ONE_ROTATION_S = CIRCUMFERENCE / MAX_SPEED;
-const float MAX_ROT = (2*M_PI) / ONE_ROTATION_S;
 
 float applyDeadband(float value, float deadband) {
   if (abs(value) < deadband) {
@@ -100,14 +94,16 @@ float applyDeadband(float value, float deadband) {
 
 HWCDC *SerialPtr;
 
+RobotPose robotPose = RobotPose();
+
 void setup() {
+  Wire.begin(PIN_SDA_Q, PIN_SCL_Q, 400000);
   NoU3.begin();
   Serial.begin(115200);
   #if DEBUG_MODE_SERIAL
     while(!Serial);
   #endif
 
-  // char *localName = "MiniFRCDiffySwerve";
   PestoLink.begin("MiniFRCDiffySwerve");
 
   for (int i = 0; i < 12; i++) {
@@ -130,37 +126,39 @@ void setup() {
 
   left.setMotorInvert(false, true);
   right.setMotorInvert(true, true);
-  
-  RSL::initialize();
 
   SerialPtr = &Serial;
-}
 
-Angle gyro = Angle(0, DEGREES);
+  while (!robotPose.begin(MAG_DEC)) {
+    Serial.println("OTOS not connected, check your wiring and I2C address!");
+    delay(1000);
+  }
+
+  NoU3.updateIMUs();
+  robotPose.setYawOffset(NoU3.magnetometer_x, NoU3.magnetometer_y);
+  robotPose.setAngularScalar(1.0);
+}
 
 void loop() {
   float vxf = 0;
   float vyf = 0;
   float omega = 0;
   if (PestoLink.update()) {
-    RSL::setState(RSL_ENABLED);
-    Serial.println(top1.getPosition().getDegrees());
-    vxf = -applyDeadband(PestoLink.getAxis(1), 0.1);//*MAX_SPEED;
-    vyf = applyDeadband(PestoLink.getAxis(0), 0.1);//*MAX_SPEED;
-    omega = applyDeadband(PestoLink.getAxis(2), 0.1);//*MAX_ROT;
+    vxf = -applyDeadband(PestoLink.getAxis(1), 0.1)*MAX_SPEED;
+    vyf = applyDeadband(PestoLink.getAxis(0), 0.1)*MAX_SPEED;
+    omega = applyDeadband(PestoLink.getAxis(2), 0.1)*MAX_SPEED;
 
     if (vxf != 0 || vyf != 0 || omega != 0) {
-      auto statesPair = drivetrain.drive(vxf, vyf, omega, gyro, false, SerialPtr);
-      // Serial.println("Left: " + states[0].toString() + " Right: " + states[1].toString() + " Center: " + states[2].toString());
+      drivetrain.drive(vxf, vyf, omega, robotPose.getHeading(), true, SerialPtr);
     }
     else {
       drivetrain.stop();
     }
   }
-  else {
-    RSL::setState(RSL_ON);
-  }
 
   drivetrain.loop();
-  RSL::update();
+  NoU3.updateIMUs();
+  robotPose.update(NoU3.magnetometer_x, NoU3.magnetometer_y);
+  Serial.println("X: " + String(robotPose.getPosition().x) + " Y: " + String(robotPose.getPosition().y) + " H: " + String(robotPose.getHeading().wrapNeg180To180().getDegrees()));
+
 }

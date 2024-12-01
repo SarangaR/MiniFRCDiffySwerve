@@ -62,6 +62,9 @@ std::array<moduleState, 3> Drivetrain::toSwerveModuleStates(float vxf, float vyf
         moduleStates[i] = moduleState(speed, moduleAngle.wrapNeg180To180().getDegrees());
     }
 
+    // moduleStates = normalizeSpeeds(moduleStates);
+    moduleStates = optimize(moduleStates, getModuleStates());
+
     return moduleStates;
 }
  
@@ -104,7 +107,7 @@ std::array<moduleState, 3> Drivetrain::normalizeSpeeds(std::array<moduleState, 3
     }
 
     float max = *std::max_element(speeds.begin(), speeds.end());
-    if (max > 1) {
+    if (max > Module::MAX_SPEED_SPIN_MS) {
         for (int i = 0; i < speeds.size(); i++) {
             speeds[i] /= max;
         }
