@@ -9,8 +9,6 @@
 #include <RobotPose.h>
 
 #define DEBUG_MODE_SERIAL false
-#define PIN_SDA_Q 33 //33
-#define PIN_SCL_Q 34 //34
 #define MAG_DEC 14.44504
 
 NoU_Motor rawtop1(3);
@@ -97,7 +95,6 @@ HWCDC *SerialPtr;
 RobotPose robotPose = RobotPose();
 
 void setup() {
-  Wire.begin(PIN_SDA_Q, PIN_SCL_Q, 400000);
   NoU3.begin();
   Serial.begin(115200);
   #if DEBUG_MODE_SERIAL
