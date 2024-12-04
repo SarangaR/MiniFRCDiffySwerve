@@ -101,7 +101,7 @@ void setup() {
     while(!Serial);
   #endif
 
-  PestoLink.begin("MiniFRCDiffySwerve");
+  PestoLink.begin("BumBotics");
 
   for (int i = 0; i < 12; i++) {
     pinMode(encoderPins[i], INPUT);
@@ -133,7 +133,8 @@ void setup() {
 
   NoU3.updateIMUs();
   robotPose.setYawOffset(NoU3.magnetometer_x, NoU3.magnetometer_y);
-  robotPose.setAngularScalar(1.0);
+  robotPose.setAngularScalar(3600.0/3598.8);
+  robotPose.setOTOSAngularScalar(1.0);
 }
 
 void loop() {
@@ -141,12 +142,14 @@ void loop() {
   float vyf = 0;
   float omega = 0;
   if (PestoLink.update()) {
+    // PestoLink.print(String(robotPose.getHeading().getDegrees()).c_str());
+    PestoLink.printBatteryVoltage(NoU3.getBatteryVoltage());
     vxf = -applyDeadband(PestoLink.getAxis(1), 0.1)*MAX_SPEED;
     vyf = applyDeadband(PestoLink.getAxis(0), 0.1)*MAX_SPEED;
     omega = applyDeadband(PestoLink.getAxis(2), 0.1)*MAX_SPEED;
 
     if (vxf != 0 || vyf != 0 || omega != 0) {
-      drivetrain.drive(vxf, vyf, omega, robotPose.getHeading(), true, SerialPtr);
+      drivetrain.drive(vxf, vyf, omega, robotPose.getHeading(), false, SerialPtr);
     }
     else {
       drivetrain.stop();
@@ -157,5 +160,4 @@ void loop() {
   NoU3.updateIMUs();
   robotPose.update(NoU3.magnetometer_x, NoU3.magnetometer_y);
   Serial.println("X: " + String(robotPose.getPosition().x) + " Y: " + String(robotPose.getPosition().y) + " H: " + String(robotPose.getHeading().wrapNeg180To180().getDegrees()));
-
 }

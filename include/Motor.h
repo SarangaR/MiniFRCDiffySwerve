@@ -63,6 +63,13 @@ struct Angle {
         return Angle(angleDegrees, DEGREES);
     }
 
+    Angle rotateBy(float angleRotate, AngleUnit unit) {
+        if (unit == DEGREES) {
+            angleRotate = radians(angleRotate);
+        }
+        return Angle(this->angle + angleRotate);
+    }
+
     Angle operator+(Angle other) {
         return Angle(angle + other.getRadians());
     }

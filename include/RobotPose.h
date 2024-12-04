@@ -22,6 +22,7 @@ class RobotPose {
         void setOTOSLinearScalar(float scalar);
         void setAngularScalar(float scalar);
         void setOTOSAngularScalar(float scalar);
+        Angle getOTOSHeading();
         sfe_otos_pose2d_t getPosition();
 
     private:

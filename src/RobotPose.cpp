@@ -74,6 +74,10 @@ sfe_otos_pose2d_t RobotPose::getPosition() {
     return robotPose;
 }
 
+Angle RobotPose::getOTOSHeading() {
+    return -robotPose.h;
+}
+
 void RobotPose::update(float mag_x, float mag_y) {
     updateHeading(mag_x, mag_y);
     getPosition();
