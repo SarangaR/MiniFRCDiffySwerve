@@ -89,7 +89,7 @@ class Module {
 
         moduleID id;
 
-        static constexpr float MAX_SPEED_SPIN_MS = 10.0f*M_PI * ((12.0f/30.0f)*(30.0f/10.0f)) * 0.05f;
+        static constexpr float MAX_SPEED_SPIN_MS = 10.0f*M_PI * 1.2 * 2.5/100.0;
     private:
         Motor* top;
         Motor* bottom;

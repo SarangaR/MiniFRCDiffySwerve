@@ -144,9 +144,9 @@ void loop() {
   if (PestoLink.update()) {
     // PestoLink.print(String(robotPose.getHeading().getDegrees()).c_str());
     PestoLink.printBatteryVoltage(NoU3.getBatteryVoltage());
-    vxf = -applyDeadband(PestoLink.getAxis(1), 0.1)*MAX_SPEED;
-    vyf = applyDeadband(PestoLink.getAxis(0), 0.1)*MAX_SPEED;
-    omega = applyDeadband(PestoLink.getAxis(2), 0.1)*MAX_SPEED;
+    vxf = -applyDeadband(PestoLink.getAxis(1), 0.1);
+    vyf = applyDeadband(PestoLink.getAxis(0), 0.1);
+    omega = applyDeadband(PestoLink.getAxis(2), 0.1)*4*M_PI;
 
     if (vxf != 0 || vyf != 0 || omega != 0) {
       drivetrain.drive(vxf, vyf, omega, robotPose.getHeading(), false, SerialPtr);
