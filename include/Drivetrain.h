@@ -45,6 +45,8 @@ class Drivetrain {
 
         static const int numModules = 3;
 
+        std::array<float, 3U> fromFieldRelativeSpeeds(float vx, float vy, float omega, Angle gyroAngle, HWCDC *serial); 
+
         // Eigen::MatrixXd inverseKinematics = Eigen::MatrixXd(numModules*2, 3);
         // Eigen::MatrixXd forwardKinematics = Eigen::MatrixXd(3, numModules*2);
 

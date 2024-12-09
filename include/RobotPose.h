@@ -15,6 +15,7 @@ class RobotPose {
         void setYawOffset(float offset);
         void setYawOffset(float mag_x, float mag_y);
         void update(float mag_x, float mag_y);
+        void updateOTOS();
         Angle getHeading();
         void calibrateHeading();
         void resetTracking();
@@ -23,6 +24,7 @@ class RobotPose {
         void setAngularScalar(float scalar);
         void setOTOSAngularScalar(float scalar);
         Angle getOTOSHeading();
+        Angle getMagHeading(float mx, float my);
         sfe_otos_pose2d_t getPosition();
 
     private:
@@ -36,6 +38,7 @@ class RobotPose {
         SOSFilter<float, 3U, BiQuadFilterDF1<float>> xFilter = butter<6>(f_n);
         SOSFilter<float, 3U, BiQuadFilterDF1<float>> yFilter = butter<6>(f_n);
         SOSFilter<float, 3U, BiQuadFilterDF1<float>> hFilter = butter<6>(f_n);
+        SOSFilter<float, 3U, BiQuadFilterDF1<float>> hFilter2 = butter<6>(f_n);
         float lastHeadingUpdate = 0;
         float currentYaw = 0;
         float angularScalar = 1;

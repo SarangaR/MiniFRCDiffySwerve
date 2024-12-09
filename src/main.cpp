@@ -90,9 +90,37 @@ float applyDeadband(float value, float deadband) {
   return value;
 }
 
+float wrapYaw(float currentYaw) {
+  static bool isInitialized = false;
+  static int rotations = 0;
+  static float previousYaw = 0;
+
+
+  if(isInitialized == false){
+    previousYaw = currentYaw;
+    isInitialized = true;
+  }
+
+    // Check for wrapping
+    if (currentYaw - previousYaw > 180.0) {
+        rotations--; // Wrapped from -180 to 180
+    } else if (currentYaw - previousYaw < -180.0) {
+        rotations++; // Wrapped from 180 to -180
+    }
+
+    // Wrap the yaw angle between -180 and 180
+    float wrappedYaw = currentYaw + rotations * 360.0;
+
+    previousYaw = currentYaw;
+
+    return wrappedYaw;
+}
+
 HWCDC *SerialPtr;
 
 RobotPose robotPose = RobotPose();
+
+float g = 0;
 
 void setup() {
   NoU3.begin();
@@ -133,23 +161,43 @@ void setup() {
 
   NoU3.updateIMUs();
   robotPose.setYawOffset(NoU3.magnetometer_x, NoU3.magnetometer_y);
-  robotPose.setAngularScalar(3600.0/3598.8);
-  robotPose.setOTOSAngularScalar(1.0);
+  // robotPose.setOTOSAngularScalar(1.0);
 }
+
+float yaw_gyro_deg = 0;
+float yaw_mag_deg = 0;
+float wrapped_yaw_mag_deg = 0;
+float yaw = 0;
+
+float yaw_offset = 0;
+
+const float alpha = 0.98; // Complementary filter weighting
+unsigned long lastTime = 0;
+
+float gyro_z_offset_degrees = -0.785;
 
 void loop() {
   float vxf = 0;
   float vyf = 0;
   float omega = 0;
   if (PestoLink.update()) {
-    // PestoLink.print(String(robotPose.getHeading().getDegrees()).c_str());
-    PestoLink.printBatteryVoltage(NoU3.getBatteryVoltage());
-    vxf = -applyDeadband(PestoLink.getAxis(1), 0.1);
-    vyf = applyDeadband(PestoLink.getAxis(0), 0.1);
-    omega = applyDeadband(PestoLink.getAxis(2), 0.1)*4*M_PI;
+    if (PestoLink.buttonHeld(0)) {
+      PestoLink.print(String(yaw).c_str());  
+    }
+    else {
+      PestoLink.printBatteryVoltage(NoU3.getBatteryVoltage());
+    }
+    vxf = applyDeadband(PestoLink.getAxis(1), 0.1);
+    vyf = -applyDeadband(PestoLink.getAxis(0), 0.1);
+    omega = -applyDeadband(PestoLink.getAxis(2), 0.1)*4*M_PI;
+
+    if (PestoLink.buttonHeld(8)) {
+      yaw_offset = yaw;
+    }
+
 
     if (vxf != 0 || vyf != 0 || omega != 0) {
-      drivetrain.drive(vxf, vyf, omega, robotPose.getHeading(), false, SerialPtr);
+      drivetrain.drive(vxf, vyf, omega, Angle(yaw, DEGREES), true, SerialPtr);
     }
     else {
       drivetrain.stop();
@@ -157,7 +205,36 @@ void loop() {
   }
 
   drivetrain.loop();
-  NoU3.updateIMUs();
-  robotPose.update(NoU3.magnetometer_x, NoU3.magnetometer_y);
-  Serial.println("X: " + String(robotPose.getPosition().x) + " Y: " + String(robotPose.getPosition().y) + " H: " + String(robotPose.getHeading().wrapNeg180To180().getDegrees()));
+  if (NoU3.updateIMUs()) {
+    unsigned long currentTime = millis();
+    float dt = (currentTime - lastTime) / 1000.0;
+    lastTime = currentTime;
+
+    // Gyroscope yaw update
+    yaw_gyro_deg += (NoU3.gyroscope_z - gyro_z_offset_degrees) * dt;
+
+    // Magnetometer yaw
+    yaw_mag_deg = -1 * degrees(atan2(NoU3.magnetometer_y, NoU3.magnetometer_x));
+
+    // Wrap Magnetometer yaw
+    if (yaw_mag_deg > 180.0) {
+      yaw_mag_deg -= 360.0;
+    } else if (yaw_mag_deg < -180.0) {
+      yaw_mag_deg += 360.0;
+    }
+    wrapped_yaw_mag_deg = yaw_mag_deg;
+
+    // Apply complementary filter with drift compensation
+    yaw = alpha * (yaw_gyro_deg) + (1 - alpha) * wrapped_yaw_mag_deg - yaw_offset;
+
+    // yaw = wrapYaw(yaw);
+
+    if (yaw > 180.0) {
+      yaw -= 360.0;
+    } else if (yaw < -180.0) {
+      yaw += 360.0;
+    }
+
+  }
+  // Serial.println("X: " + String(robotPose.getPosition().x) + " Y: " + String(robotPose.getPosition().y) + " H: " + String(robotPose.getHeading().wrapNeg180To180().getDegrees()));
 }

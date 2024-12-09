@@ -32,11 +32,11 @@ void Drivetrain::loop() {
 }
 
 std::array<moduleState, 3> Drivetrain::toSwerveModuleStates(float vxf, float vyf, float omega, Angle angle, bool fieldOriented, HWCDC *serial) {
-    float gyroAngle = fieldOriented ? angle.wrapNeg180To180().getRadians() : 0;
+    Angle gyroAngle = fieldOriented ? angle : Angle(0);
 
-    // Rotate velocities by gyro angle if in field-oriented mode
-    float vx = vxf * cos(gyroAngle) + vyf * sin(gyroAngle);
-    float vy = -vxf * sin(gyroAngle) + vyf * cos(gyroAngle);
+    std::array<float, 3U> chassisSpeeds = fromFieldRelativeSpeeds(vxf, vyf, omega, gyroAngle, serial);
+    float vx = chassisSpeeds[0];
+    float vy = chassisSpeeds[1];
 
     std::array<moduleState, 3> moduleStates = {
         moduleState(0, 0),
@@ -61,11 +61,19 @@ std::array<moduleState, 3> Drivetrain::toSwerveModuleStates(float vxf, float vyf
         // Set module state with speed and angle
         moduleStates[i] = moduleState(speed, moduleAngle.wrapNeg180To180().getDegrees());
         moduleStates[i].optimize(getModuleOrientations()[i]);
+
     }
 
-    moduleStates = optimize(moduleStates, getModuleStates());
-
     return moduleStates;
+}
+
+std::array<float, 3U> Drivetrain::fromFieldRelativeSpeeds(float vx, float vy, float omega, Angle gyroAngle, HWCDC* serial) {
+    float robotVx = vx * cosf(gyroAngle.getRadians()) - vy * sinf(gyroAngle.getRadians());
+    float robotVy = vx * sinf(gyroAngle.getRadians()) + vy * cosf(gyroAngle.getRadians());
+
+    serial->println("RobotVx: " + String(robotVx) + " RobotVy: " + String(robotVy) + " GyroAngle: " + String(gyroAngle.getDegrees()));
+    serial->println("FieldOriented Vx: " + String(vx) + " Vy: " + String(vy));
+    return {robotVx, robotVy, omega};
 }
  
 std::array<moduleState, 3> Drivetrain::optimize(std::array<moduleState, 3> desiredStates, std::array<moduleState, 3> currentStates) {

@@ -54,7 +54,7 @@ float Module::getModuleSpeed() {
     float topSpeed = topMotorSpeed * gearRatioSpin;
     float bottomSpeed = bottomMotorSpeed * gearRatioSpin;
 
-    Angle speed = Angle((topSpeed + bottomSpeed) / 2);
+    Angle speed = Angle((topSpeed - bottomSpeed) / 2);
 
     //convert from rad/s to m/s
     float speedMetersPerSecond = speed.getRadians() * wheelRadius;

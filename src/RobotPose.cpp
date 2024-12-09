@@ -75,7 +75,24 @@ sfe_otos_pose2d_t RobotPose::getPosition() {
 }
 
 Angle RobotPose::getOTOSHeading() {
-    return -robotPose.h;
+    return Angle(hFilter2(robotPose.h), DEGREES);
+}
+
+void RobotPose::updateOTOS() {
+    otos.getPosition(robotPose);
+}
+
+Angle RobotPose::getMagHeading(float mx, float my) {
+    float yaw = degrees(atan2(my, mx)) + mag_dec;
+    yaw -= yaw_offset;
+
+    if (yaw > 180.0f) {
+        yaw -= 360.0f;
+    }
+    else if (yaw < -180.0f) {
+        yaw += 360.0f;
+    }
+    return Angle(yaw, DEGREES).wrapNeg180To180();
 }
 
 void RobotPose::update(float mag_x, float mag_y) {
