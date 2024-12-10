@@ -174,22 +174,22 @@ void setup() {
 }
 
 void loop() {
-  sfe_otos_pose2d_t robotPose;
+  // sfe_otos_pose2d_t robotPose;
   float vxf = 0;
   float vyf = 0;
   float omega = 0;
   if (PestoLink.update()) {
-    if (PestoLink.buttonHeld(0)) {
-      String out = String(round(robotPose.x)) + String(" ") + String(robotPose.y);
-      PestoLink.print(out.c_str());
-    }
-    else if (PestoLink.buttonHeld(3)) {
-      String out = String(robotPose.h);
-      PestoLink.print(out.c_str());
-    }
-    else {
-      PestoLink.printBatteryVoltage(NoU3.getBatteryVoltage());
-    }
+    // if (PestoLink.buttonHeld(0)) {
+    //   String out = String(round(robotPose.x)) + String(" ") + String(robotPose.y);
+    //   PestoLink.print(out.c_str());
+    // }
+    // else if (PestoLink.buttonHeld(3)) {
+    //   String out = String(robotPose.h);
+    //   PestoLink.print(out.c_str());
+    // }
+    // else {
+    PestoLink.printBatteryVoltage(NoU3.getBatteryVoltage());
+    // }
     vxf = applyDeadband(PestoLink.getAxis(1), 0.1);
     vyf = -applyDeadband(PestoLink.getAxis(0), 0.1);
     omega = -applyDeadband(PestoLink.getAxis(2), 0.1)*4*M_PI;
@@ -198,9 +198,9 @@ void loop() {
     //   otos.resetTracking();
     // }
 
-    if (PestoLink.buttonHeld(1)) {
-      drivetrain.followSpline(path, robotPose);
-    }
+    // if (PestoLink.buttonHeld(1)) {
+    //   drivetrain.followSpline(path, robotPose);
+    // }
 
     if (vxf != 0 || vyf != 0 || omega != 0) {
       drivetrain.drive(vxf, vyf, omega, Angle(0, DEGREES), false);
