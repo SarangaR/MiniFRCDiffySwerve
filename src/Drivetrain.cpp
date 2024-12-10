@@ -31,10 +31,10 @@ void Drivetrain::loop() {
     center->loop();
 }
 
-std::array<moduleState, 3> Drivetrain::toSwerveModuleStates(float vxf, float vyf, float omega, Angle angle, bool fieldOriented, HWCDC *serial) {
+std::array<moduleState, 3> Drivetrain::toSwerveModuleStates(float vxf, float vyf, float omega, Angle angle, bool fieldOriented) {
     Angle gyroAngle = fieldOriented ? angle : Angle(0);
 
-    std::array<float, 3U> chassisSpeeds = fromFieldRelativeSpeeds(vxf, vyf, omega, gyroAngle, serial);
+    std::array<float, 3U> chassisSpeeds = fromFieldRelativeSpeeds(vxf, vyf, omega, gyroAngle);
     float vx = chassisSpeeds[0];
     float vy = chassisSpeeds[1];
 
@@ -67,12 +67,10 @@ std::array<moduleState, 3> Drivetrain::toSwerveModuleStates(float vxf, float vyf
     return moduleStates;
 }
 
-std::array<float, 3U> Drivetrain::fromFieldRelativeSpeeds(float vx, float vy, float omega, Angle gyroAngle, HWCDC* serial) {
+std::array<float, 3U> Drivetrain::fromFieldRelativeSpeeds(float vx, float vy, float omega, Angle gyroAngle) {
     float robotVx = vx * cosf(gyroAngle.getRadians()) - vy * sinf(gyroAngle.getRadians());
     float robotVy = vx * sinf(gyroAngle.getRadians()) + vy * cosf(gyroAngle.getRadians());
 
-    serial->println("RobotVx: " + String(robotVx) + " RobotVy: " + String(robotVy) + " GyroAngle: " + String(gyroAngle.getDegrees()));
-    serial->println("FieldOriented Vx: " + String(vx) + " Vy: " + String(vy));
     return {robotVx, robotVy, omega};
 }
  
@@ -96,8 +94,8 @@ std::array<moduleState, 3> Drivetrain::optimize(std::array<moduleState, 3> desir
     return newStates;
 } 
 
-std::array<moduleState, 3> Drivetrain::drive(float vx, float vy, float omega, Angle gyroAngle, bool fieldOriented, HWCDC *serial) {
-    std::array<moduleState, 3> states = toSwerveModuleStates(vx, vy, omega, gyroAngle, fieldOriented, serial);
+std::array<moduleState, 3> Drivetrain::drive(float vx, float vy, float omega, Angle gyroAngle, bool fieldOriented) {
+    std::array<moduleState, 3> states = toSwerveModuleStates(vx, vy, omega, gyroAngle, fieldOriented);
 
     lastModuleStates = {states[0].toString(), states[1].toString(), states[2].toString()};
 
@@ -142,8 +140,64 @@ std::array<moduleState, 3> Drivetrain::getModuleStates() {
     return {left->getState(), right->getState(), center->getState()};
 }
 
+void Drivetrain::setBrake(bool brake) {
+    left->setBrake(brake);
+    right->setBrake(brake);
+    center->setBrake(brake);
+}
+
 void Drivetrain::stop() {
     right->stop();
     left->stop();
     center->stop();
+}
+
+int Drivetrain::findClosestPoint(const std::vector<Point>& spline, float x, float y) {
+    int closestIndex = 0;
+    double minDistance = 1e6;
+
+    for (int i = 0; i < spline.size(); i++) {
+        double distance = sqrt(pow(spline[i].x - x, 2) + pow(spline[i].y - y, 2));
+        if (distance < minDistance) {
+        minDistance = distance;
+        closestIndex = i;
+        }
+    }
+    return closestIndex;
+}
+
+Point Drivetrain::findLookaheadPoint(const std::vector<Point>& spline, int closestIndex, float lookaheadDistance, sfe_otos_pose2d_t pose) {
+    float currX = -pose.x;
+    float currY = -pose.y;
+    for (int i = closestIndex; i < spline.size(); i++) {
+        double distance = sqrt(pow(spline[i].x - currX, 2) + pow(spline[i].y - currY, 2));
+        if (distance >= lookaheadDistance) {
+        return spline[i];
+        }
+    }
+    return spline.back(); // Return the last point if no lookahead point is found
+}
+
+void Drivetrain::followSpline(const std::vector<Point>& spline, sfe_otos_pose2d_t pose, float LOOKAHEAD_DISTANCE, float KP_POSITION, float KP_ORIENTATION) {
+    float currX = -pose.x;
+    float currY = -pose.y;
+
+    // Find the closest point on the spline
+    int closestIndex = findClosestPoint(spline, currX, currY);
+
+    // Find the lookahead point
+    Point lookaheadPoint = findLookaheadPoint(spline, closestIndex, LOOKAHEAD_DISTANCE, pose);
+
+    // Compute desired velocities
+    double vx = KP_POSITION * (lookaheadPoint.x - currX);
+    double vy = KP_POSITION * (lookaheadPoint.y - currY);
+    double desiredTheta = atan2(lookaheadPoint.y - pose.h, lookaheadPoint.x - pose.h);
+    double omega = KP_ORIENTATION * (desiredTheta - pose.h);
+
+    // Transform velocities to robot-centric
+    double vxRobot = vx * cos(pose.h) + vy * sin(pose.h);
+    double vyRobot = -vx * sin(pose.h) + vy * cos(pose.h);
+
+    // Send velocity commands to the robot
+    this->drive(vxRobot, vyRobot, omega, Angle(pose.h, DEGREES), false);
 }

@@ -119,3 +119,13 @@ void Module::setMotorInvert(bool topInvert, bool bottomInvert) {
     bottom->setInverted(bottomInvert);
 }
 
+void Module::setBrake(bool brake) {
+    if (brake) {
+        top->setBrake(BRAKE);
+        bottom->setBrake(BRAKE);
+    } else {
+        top->setBrake(RELEASE);
+        bottom->setBrake(RELEASE);
+    }
+}
+

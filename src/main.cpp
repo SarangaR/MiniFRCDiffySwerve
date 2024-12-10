@@ -116,11 +116,8 @@ float wrapYaw(float currentYaw) {
     return wrappedYaw;
 }
 
-HWCDC *SerialPtr;
-
-RobotPose robotPose = RobotPose();
-
-float g = 0;
+QwiicOTOS otos;
+std::vector<Point> path;
 
 void setup() {
   NoU3.begin();
@@ -152,37 +149,43 @@ void setup() {
   left.setMotorInvert(false, true);
   right.setMotorInvert(true, true);
 
-  SerialPtr = &Serial;
+  drivetrain.setBrake(true);
 
-  while (!robotPose.begin(MAG_DEC)) {
+  while (!otos.begin()) {
     Serial.println("OTOS not connected, check your wiring and I2C address!");
     delay(1000);
   }
 
   NoU3.updateIMUs();
-  robotPose.setYawOffset(NoU3.magnetometer_x, NoU3.magnetometer_y);
-  // robotPose.setOTOSAngularScalar(1.0);
+  otos.calibrateImu();
+  otos.setLinearUnit(kSfeOtosLinearUnitInches);
+  otos.setAngularUnit(kSfeOtosAngularUnitDegrees);
+  otos.setAngularScalar(1.0);
+  otos.setLinearScalar(1.0);
+  otos.resetTracking();
+
+  std::vector<Point> controlPoints = {
+    {0, 0},
+    {0, 6},
+    {24, 0}
+  };
+
+  path = PathPlanner::generateSpline(controlPoints);
 }
 
-float yaw_gyro_deg = 0;
-float yaw_mag_deg = 0;
-float wrapped_yaw_mag_deg = 0;
-float yaw = 0;
-
-float yaw_offset = 0;
-
-const float alpha = 0.98; // Complementary filter weighting
-unsigned long lastTime = 0;
-
-float gyro_z_offset_degrees = -0.785;
-
 void loop() {
+  sfe_otos_pose2d_t robotPose;
   float vxf = 0;
   float vyf = 0;
   float omega = 0;
   if (PestoLink.update()) {
     if (PestoLink.buttonHeld(0)) {
-      PestoLink.print(String(yaw).c_str());  
+      String out = String(round(robotPose.x)) + String(" ") + String(robotPose.y);
+      PestoLink.print(out.c_str());
+    }
+    else if (PestoLink.buttonHeld(3)) {
+      String out = String(robotPose.h);
+      PestoLink.print(out.c_str());
     }
     else {
       PestoLink.printBatteryVoltage(NoU3.getBatteryVoltage());
@@ -192,12 +195,15 @@ void loop() {
     omega = -applyDeadband(PestoLink.getAxis(2), 0.1)*4*M_PI;
 
     if (PestoLink.buttonHeld(8)) {
-      yaw_offset = yaw;
+      otos.resetTracking();
     }
 
+    if (PestoLink.buttonHeld(1)) {
+      drivetrain.followSpline(path, robotPose);
+    }
 
     if (vxf != 0 || vyf != 0 || omega != 0) {
-      drivetrain.drive(vxf, vyf, omega, Angle(yaw, DEGREES), true, SerialPtr);
+      drivetrain.drive(vxf, vyf, omega, Angle(robotPose.h, DEGREES), true);
     }
     else {
       drivetrain.stop();
@@ -205,36 +211,5 @@ void loop() {
   }
 
   drivetrain.loop();
-  if (NoU3.updateIMUs()) {
-    unsigned long currentTime = millis();
-    float dt = (currentTime - lastTime) / 1000.0;
-    lastTime = currentTime;
-
-    // Gyroscope yaw update
-    yaw_gyro_deg += (NoU3.gyroscope_z - gyro_z_offset_degrees) * dt;
-
-    // Magnetometer yaw
-    yaw_mag_deg = -1 * degrees(atan2(NoU3.magnetometer_y, NoU3.magnetometer_x));
-
-    // Wrap Magnetometer yaw
-    if (yaw_mag_deg > 180.0) {
-      yaw_mag_deg -= 360.0;
-    } else if (yaw_mag_deg < -180.0) {
-      yaw_mag_deg += 360.0;
-    }
-    wrapped_yaw_mag_deg = yaw_mag_deg;
-
-    // Apply complementary filter with drift compensation
-    yaw = alpha * (yaw_gyro_deg) + (1 - alpha) * wrapped_yaw_mag_deg - yaw_offset;
-
-    // yaw = wrapYaw(yaw);
-
-    if (yaw > 180.0) {
-      yaw -= 360.0;
-    } else if (yaw < -180.0) {
-      yaw += 360.0;
-    }
-
-  }
-  // Serial.println("X: " + String(robotPose.getPosition().x) + " Y: " + String(robotPose.getPosition().y) + " H: " + String(robotPose.getHeading().wrapNeg180To180().getDegrees()));
+  otos.getPosition(robotPose);
 }

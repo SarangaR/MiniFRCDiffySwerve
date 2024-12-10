@@ -45,3 +45,11 @@ Angle Motor::getVelocity() {
     // return sensor->getVelocity();
     return Angle(sensor->getVelocity());
 }
+
+void Motor::setBrake(bool brake) {
+    if (brake) {
+        rawMotor->setBrake(BRAKE);
+    } else {
+        rawMotor->setBrake(RELEASE);
+    }
+}

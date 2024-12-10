@@ -27,8 +27,9 @@ class RobotPose {
         Angle getMagHeading(float mx, float my);
         sfe_otos_pose2d_t getPosition();
 
-    private:
         QwiicOTOS otos;
+
+    private:
         sfe_otos_pose2d_t robotPose;
         float yaw_offset = 0;
         float mag_dec = 0;

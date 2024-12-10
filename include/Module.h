@@ -85,6 +85,8 @@ class Module {
         void setInverted(bool inverted);
         void setMotorInvert(bool top, bool bottom);
 
+        void setBrake(bool brake);
+
         void loop();
 
         moduleID id;

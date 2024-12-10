@@ -146,6 +146,7 @@ class Motor {
         void setInverted(bool inverted);
         void begin();
         void loop();
+        void setBrake(bool brake);
 
         bool inverted = false;
 

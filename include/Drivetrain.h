@@ -6,16 +6,20 @@
 #include <vector>
 #include <ArduinoEigen.h>
 #include <ArduinoEigenDense.h>
+#include <PathPlanner.h>
+#include <SparkFun_Qwiic_OTOS_Arduino_Library.h>
 
 class Drivetrain {
     public:
         Drivetrain(Module* left, Module* right, Module* center);
-        std::array<moduleState, 3> drive(float vx, float vy, float omega, Angle gyroAngle, bool fieldOriented, HWCDC *serial);
-        std::array<moduleState, 3> toSwerveModuleStates(float vx, float vy, float omega, Angle angle, bool fieldOriented, HWCDC *serial);
+        std::array<moduleState, 3> drive(float vx, float vy, float omega, Angle gyroAngle, bool fieldOriented);
+        std::array<moduleState, 3> toSwerveModuleStates(float vx, float vy, float omega, Angle angle, bool fieldOriented);
         void stop();
         void begin();
         float getGyroAngle();
         void loop();
+        void setBrake(bool brake);
+
         std::vector<Angle> getModuleOrientations();
         std::vector<float> getModuleSpeeds();
         std::array<moduleState, 3> getModuleStates();
@@ -38,6 +42,8 @@ class Drivetrain {
             Eigen::Vector3d(0, 0.5*sideLength, 0)
         };
 
+        void followSpline(const std::vector<Point>& spline, sfe_otos_pose2d_t pose, float LOOKAHEAD_DISTANCE = 0.2, float KP_POSITION = 1.0, float KP_ORIENTATION = 1.0);
+
     private:
         Module* left;
         Module* right;
@@ -45,7 +51,10 @@ class Drivetrain {
 
         static const int numModules = 3;
 
-        std::array<float, 3U> fromFieldRelativeSpeeds(float vx, float vy, float omega, Angle gyroAngle, HWCDC *serial); 
+        std::array<float, 3U> fromFieldRelativeSpeeds(float vx, float vy, float omega, Angle gyroAngle); 
+
+        int findClosestPoint(const std::vector<Point>& spline, float x, float y);
+        Point findLookaheadPoint(const std::vector<Point>& spline, int closestIndex, float lookaheadDistance, sfe_otos_pose2d_t pose);
 
         // Eigen::MatrixXd inverseKinematics = Eigen::MatrixXd(numModules*2, 3);
         // Eigen::MatrixXd forwardKinematics = Eigen::MatrixXd(3, numModules*2);
