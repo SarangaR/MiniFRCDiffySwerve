@@ -116,7 +116,7 @@ float wrapYaw(float currentYaw) {
     return wrappedYaw;
 }
 
-QwiicOTOS otos;
+// QwiicOTOS otos;
 std::vector<Point> path;
 
 void setup() {
@@ -151,18 +151,18 @@ void setup() {
 
   drivetrain.setBrake(true);
 
-  while (!otos.begin()) {
-    Serial.println("OTOS not connected, check your wiring and I2C address!");
-    delay(1000);
-  }
+  // while (!otos.begin()) {
+  //   Serial.println("OTOS not connected, check your wiring and I2C address!");
+  //   delay(1000);
+  // }
 
   NoU3.updateIMUs();
-  otos.calibrateImu();
-  otos.setLinearUnit(kSfeOtosLinearUnitInches);
-  otos.setAngularUnit(kSfeOtosAngularUnitDegrees);
-  otos.setAngularScalar(1.0);
-  otos.setLinearScalar(1.0);
-  otos.resetTracking();
+  // otos.calibrateImu();
+  // otos.setLinearUnit(kSfeOtosLinearUnitInches);
+  // otos.setAngularUnit(kSfeOtosAngularUnitDegrees);
+  // otos.setAngularScalar(1.0);
+  // otos.setLinearScalar(1.0);
+  // otos.resetTracking();
 
   std::vector<Point> controlPoints = {
     {0, 0},
@@ -194,16 +194,16 @@ void loop() {
     vyf = -applyDeadband(PestoLink.getAxis(0), 0.1);
     omega = -applyDeadband(PestoLink.getAxis(2), 0.1)*4*M_PI;
 
-    if (PestoLink.buttonHeld(8)) {
-      otos.resetTracking();
-    }
+    // if (PestoLink.buttonHeld(8)) {
+    //   otos.resetTracking();
+    // }
 
     if (PestoLink.buttonHeld(1)) {
       drivetrain.followSpline(path, robotPose);
     }
 
     if (vxf != 0 || vyf != 0 || omega != 0) {
-      drivetrain.drive(vxf, vyf, omega, Angle(robotPose.h, DEGREES), true);
+      drivetrain.drive(vxf, vyf, omega, Angle(0, DEGREES), false);
     }
     else {
       drivetrain.stop();
@@ -211,5 +211,5 @@ void loop() {
   }
 
   drivetrain.loop();
-  otos.getPosition(robotPose);
+  // otos.getPosition(robotPose);
 }
